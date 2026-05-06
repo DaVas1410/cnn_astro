@@ -1,0 +1,17 @@
+2025-09-12 19:18:12 - INFO - pyFC - ============= Parameters =============
+2025-09-12 19:18:12 - INFO - pyFC - Mesh:        ni = 128, nj = 128, nk = 128
+2025-09-12 19:18:12 - INFO - pyFC - Wavenumbers: kmin = 6.28, kmax = 18.85
+2025-09-12 19:18:12 - INFO - pyFC - Gaussian:    mean = 1.0, sigma = 2.0
+2025-09-12 19:18:12 - INFO - pyFC - Index:       beta = -1.44
+2025-09-12 19:18:12 - INFO - pyFC - Loop:        max_iter = 10, tol = 0.01
+2025-09-12 19:18:13 - INFO - pyFC - ========= Iterative process ==========
+2025-09-12 19:18:14 - INFO - pyFC - Iter: 1 | Conv: 8.7589e-02 | Time: 1.57 s
+2025-09-12 19:18:16 - INFO - pyFC - Iter: 2 | Conv: 4.9695e-02 | Time: 1.66 s
+2025-09-12 19:18:17 - INFO - pyFC - Iter: 3 | Conv: 3.0171e-02 | Time: 1.11 s
+2025-09-12 19:18:18 - INFO - pyFC - Iter: 4 | Conv: 1.9511e-02 | Time: 1.02 s
+2025-09-12 19:18:19 - INFO - pyFC - Iter: 5 | Conv: 1.3229e-02 | Time: 0.96 s
+2025-09-12 19:18:20 - INFO - pyFC - Iter: 6 | Conv: 9.3071e-03 | Time: 0.93 s
+2025-09-12 19:18:20 - INFO - pyFC - ============== Summary ===============
+2025-09-12 19:18:20 - INFO - pyFC - Status: SUCCESS
+2025-09-12 19:18:20 - INFO - pyFC - Total iterations: 6
+2025-09-12 19:18:20 - INFO - pyFC - Total time: 7.24 s

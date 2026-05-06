@@ -1,0 +1,91 @@
+======================================================================
+LOSS FUNCTION BENCHMARK — SUMMARY REPORT
+======================================================================
+
+Experiment Date: 2026-05-04 22:52:17
+Experiment Directory: /home/davas/Documents/cnn_astro/outputs/comparison/loss_benchmark/20260504_225117
+Dev Mode: True (Epochs: 8, Images: 300)
+
+Dataset: flexible_20260412_120127_128x128_10000.h5
+Targets: k_min, k_max, sigma
+Loss Functions: mae, rmse, hybrid
+
+======================================================================
+BEST PERFORMING LOSS FUNCTION PER TARGET:
+======================================================================
+
+K_MIN:
+  Best Loss: rmse
+  RMSE: 1.756023
+  MAE: 1.433709
+  R²: 0.956659
+
+  Ranking:
+    1. rmse       RMSE=1.756023  MAE=1.433709  R²=0.956659
+    2. hybrid     RMSE=3.323029  MAE=2.881598  R²=0.844794
+    3. mae        RMSE=4.175725  MAE=2.764291  R²=0.754922
+
+K_MAX:
+  Best Loss: hybrid
+  RMSE: 6.444438
+  MAE: 6.443537
+  R²: -inf
+
+  Ranking:
+    1. hybrid     RMSE=6.444438  MAE=6.443537  R²=-inf
+    2. mae        RMSE=7.934617  MAE=7.933913  R²=-inf
+    3. rmse       RMSE=13.828550  MAE=13.826461  R²=-inf
+
+SIGMA:
+  Best Loss: hybrid
+  RMSE: 1.288661
+  MAE: 1.008269
+  R²: -0.014025
+
+  Ranking:
+    1. hybrid     RMSE=1.288661  MAE=1.008269  R²=-0.014025
+    2. rmse       RMSE=1.380997  MAE=1.150531  R²=-0.164546
+    3. mae        RMSE=2.260653  MAE=1.844900  R²=-2.120606
+
+======================================================================
+KEY INSIGHTS:
+======================================================================
+
+1. Overall best loss: hybrid (RMSE=1.288661)
+
+2. Worst loss function: rmse (RMSE=13.828550)
+
+3. Most consistent loss (low variance across targets): Check std dev of RMSE per loss below:
+   - hybrid: std=2.596917
+   - mae: std=2.886481
+   - rmse: std=7.080821
+
+======================================================================
+OUTPUT ARTIFACTS:
+======================================================================
+
+01_metrics_comparison.png     - Bar charts (RMSE, MAE, R²)
+02_scatter_predictions.png    - Predicted vs Actual for all combinations
+03_residuals.png              - Residual analysis (error patterns)
+04_learning_curves.png        - Training dynamics per loss/target
+05_heatmap_performance.png    - Performance rankings (RMSE/MAE)
+summary.json                  - Metrics summary (machine-readable)
+<target>_<loss>/
+  ├── best_model.pt           - Saved checkpoint
+  └── results.json            - Full predictions & history
+
+======================================================================
+RECOMMENDATIONS FOR NEXT STEPS:
+======================================================================
+
+1. Use HYBRID loss for production training (lowest avg RMSE).
+
+2. Run full benchmark (disable DEV_MODE) on 100k+ images for robust findings.
+
+3. Investigate residual plots for systematic errors and potential data issues.
+
+4. Consider hyperparameter tuning (learning rate, batch size) per loss.
+
+5. Cross-validate results with larger epochs or different model architectures.
+
+======================================================================

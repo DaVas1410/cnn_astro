@@ -1,0 +1,158 @@
+# Default configuration for Fractal Classifier v0.2
+# Regression model: predicts k_min (continuous, 1–32)
+
+# ---------------------------------------------------------------------------
+# Data
+# ---------------------------------------------------------------------------
+data:
+  # Path to the directory containing extracted HDF5 files.
+  # Each file must follow the naming convention:
+  #   task{N}_kmin{N+1}_kmax-auto_128-256-512_merged.h5
+  dataset_dir: "data/kmin_dataset"
+
+  # Native input resolution for the model (patch size for larger images)
+  native_resolution: 128          # px
+
+  # Which resolutions to include during training
+  # Larger images are automatically sliced into native_resolution × native_resolution patches
+  resolutions:
+    - 128
+    - 256
+    - 512
+
+  # k_min range (used for label normalisation and sanity checks)
+  kmin_min: 1.0
+  kmin_max: 32.0
+
+  # Train / validation / test split (must sum to 1.0)
+  split:
+    train_ratio: 0.70
+    val_ratio:   0.15
+    test_ratio:  0.15
+    stratified:  true   # balance k_min classes across splits
+    random_seed: 42
+
+  # Number of tf.data parallel workers
+  num_parallel_calls: 4
+  prefetch: 2
+
+# ---------------------------------------------------------------------------
+# Model
+# ---------------------------------------------------------------------------
+model:
+  # Input shape (height, width, channels) — must match native_resolution
+  input_shape: [128, 128, 1]
+
+  # Filter counts for each depthwise-separable block
+  # Each entry adds one DS-Conv block followed by MaxPool(2)
+  filters: [32, 64, 128]
+
+  # Dense head
+  dense_units: 64
+  dropout_rate: 0.3
+
+  # Regularisation
+  l2_weight: 0.0       # set > 0 to enable L2 on conv kernels
+  batch_norm: true
+
+  # Output: single neuron, linear activation (regression)
+  # dtype forced to float32 for mixed-precision stability
+
+# ---------------------------------------------------------------------------
+# Training
+# ---------------------------------------------------------------------------
+training:
+  epochs: 50
+  batch_size: 32
+  learning_rate: 0.0001
+
+  optimizer: adam        # adam | sgd | rmsprop
+  optimizer_params:
+    beta_1: 0.9
+    beta_2: 0.999
+    epsilon: 1.0e-7
+
+  # Loss: huber is recommended for robust regression
+  loss: huber            # huber | mse | mae
+  huber_delta: 1.0
+
+  # Data augmentation (training only)
+  augmentation:
+    horizontal_flip: true
+    vertical_flip: true
+    rotation_range: 0      # degrees; 0 = disabled
+
+  # Shuffle buffer size (set to a large value for thorough mixing)
+  shuffle_buffer: 4096
+
+  # Learning rate schedule (applied after warmup, optional)
+  lr_schedule:
+    enabled: false
+    type: cosine_decay     # cosine_decay | exponential_decay
+    decay_steps: 50000
+
+# ---------------------------------------------------------------------------
+# Callbacks
+# ---------------------------------------------------------------------------
+callbacks:
+  checkpoint:
+    enabled: true
+    monitor: val_mae
+    mode: min
+    save_best_only: true
+    filename: "best.keras"
+
+  early_stopping:
+    enabled: true
+    monitor: val_mae
+    patience: 10
+    min_delta: 0.01
+    restore_best_weights: true
+
+  reduce_lr:
+    enabled: true
+    monitor: val_mae
+    factor: 0.5
+    patience: 5
+    min_lr: 1.0e-7
+
+  csv_logger:
+    enabled: true
+
+  tensorboard:
+    enabled: false
+
+# ---------------------------------------------------------------------------
+# GPU
+# ---------------------------------------------------------------------------
+gpu:
+  allocator: cuda_malloc_async
+  memory_growth: true
+  mixed_precision:
+    enabled: true
+    policy: mixed_float16
+
+# ---------------------------------------------------------------------------
+# Evaluation
+# ---------------------------------------------------------------------------
+evaluation:
+  batch_size: 64
+  export_predictions: true    # save per-sample CSV
+
+# ---------------------------------------------------------------------------
+# Visualization
+# ---------------------------------------------------------------------------
+visualization:
+  dpi: 150
+  formats: [png]
+  smooth_window: 5            # training curve smoothing
+
+# ---------------------------------------------------------------------------
+# Paths
+# ---------------------------------------------------------------------------
+paths:
+  output_dir: "outputs"
+  checkpoint_dir: "outputs/checkpoints"
+  history_dir: "outputs/history"
+  evaluation_dir: "outputs/evaluation"
+  plots_dir: "outputs/plots"

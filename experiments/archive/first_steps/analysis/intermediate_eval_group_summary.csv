@@ -1,0 +1,6 @@
+group,images_count,mean_pred_centroid,std_pred_centroid,mean_abs_error,median_abs_error
+k_12,200,15.975,0.177,3.975,3.993
+k_24,200,31.999,0.002,7.999,8.0
+k_3,200,3.006,0.609,0.53,0.531
+k_48,200,64.0,0.0,16.0,16.0
+k_6,200,7.173,0.435,1.175,1.285

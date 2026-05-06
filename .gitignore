@@ -1,0 +1,59 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.so
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Data files (large binaries)
+data/raw/*.h5
+data/raw/perf/
+
+# Model checkpoints
+*.pt
+*.pth
+*.ckpt
+*.h5
+*.keras
+
+# NumPy arrays
+*.npy
+*.npz
+
+# Figures / outputs (keep directory structure)
+outputs/**/*.png
+outputs/**/*.pdf
+outputs/**/*.svg
+outputs/output_data_*.npy
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# SLURM logs
+*.out
+*.err
+slurm-*.out
