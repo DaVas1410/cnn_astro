@@ -1,0 +1,185 @@
+======================================================================
+BALANCED 4-PARAMETER DATASET GENERATION (k_min, k_max, sigma, beta)
+======================================================================
+Output:     /home/davas/Documents/cnn_astro/data/raw/balanced_4param_128x128_100000.h5
+Images:     100000
+Resolution: 128x128x1 (Nyquist=64.0)
+Workers:    15    Batch: 200
+k_min:      U[1.0, 62.0]   (float)
+k_max:      U[3.0, 64.0]   (float, gap=2.0)
+sigma:      U[0.01, 5.0]
+beta:       U[-3.0, -1.0]
+======================================================================
+/home/davas/Documents/cnn_astro/src/pyFC_lib/pyFC/mathtools.py:141: RuntimeWarning: invalid value encountered in sqrt
+  return (np.exp(s*s) + 2)*np.sqrt(s*s - 1)
+/home/davas/Documents/cnn_astro/src/pyFC_lib/pyFC/mathtools.py:141: RuntimeWarning: invalid value encountered in sqrt
+  return (np.exp(s*s) + 2)*np.sqrt(s*s - 1)
+/home/davas/Documents/cnn_astro/src/pyFC_lib/pyFC/clouds.py:1238: RuntimeWarning: divide by zero encountered in power
+  return np.where(np.greater_equal(np.abs(k), kmin), np.abs(k) ** (beta - 2.), 0)
+/home/davas/Documents/cnn_astro/src/pyFC_lib/pyFC/clouds.py:1238: RuntimeWarning: divide by zero encountered in power
+  return np.where(np.greater_equal(np.abs(k), kmin), np.abs(k) ** (beta - 2.), 0)
+/home/davas/Documents/cnn_astro/src/pyFC_lib/pyFC/clouds.py:1238: RuntimeWarning: divide by zero encountered in power
+  return np.where(np.greater_equal(np.abs(k), kmin), np.abs(k) ** (beta - 2.), 0)
+/home/davas/Documents/cnn_astro/src/pyFC_lib/pyFC/clouds.py:1238: RuntimeWarning: divide by zero encountered in power
+  return np.where(np.greater_equal(np.abs(k), kmin), np.abs(k) ** (beta - 2.), 0)
+/home/davas/Documents/cnn_astro/src/pyFC_lib/pyFC/clouds.py:1238: RuntimeWarning: divide by zero encountered in power
+  return np.where(np.greater_equal(np.abs(k), kmin), np.abs(k) ** (beta - 2.), 0)
+/home/davas/Documents/cnn_astro/src/pyFC_lib/pyFC/clouds.py:1238: RuntimeWarning: divide by zero encountered in power
+  return np.where(np.greater_equal(np.abs(k), kmin), np.abs(k) ** (beta - 2.), 0)
+/home/davas/Documents/cnn_astro/src/pyFC_lib/pyFC/clouds.py:1238: RuntimeWarning: divide by zero encountered in power
+  return np.where(np.greater_equal(np.abs(k), kmin), np.abs(k) ** (beta - 2.), 0)
+/home/davas/Documents/cnn_astro/src/pyFC_lib/pyFC/clouds.py:1238: RuntimeWarning: divide by zero encountered in power
+  return np.where(np.greater_equal(np.abs(k), kmin), np.abs(k) ** (beta - 2.), 0)
+/home/davas/Documents/cnn_astro/src/pyFC_lib/pyFC/clouds.py:1238: RuntimeWarning: divide by zero encountered in power
+  return np.where(np.greater_equal(np.abs(k), kmin), np.abs(k) ** (beta - 2.), 0)
+/home/davas/Documents/cnn_astro/src/pyFC_lib/pyFC/clouds.py:1238: RuntimeWarning: divide by zero encountered in power
+  return np.where(np.greater_equal(np.abs(k), kmin), np.abs(k) ** (beta - 2.), 0)
+/home/davas/Documents/cnn_astro/src/pyFC_lib/pyFC/clouds.py:1238: RuntimeWarning: divide by zero encountered in power
+  return np.where(np.greater_equal(np.abs(k), kmin), np.abs(k) ** (beta - 2.), 0)
+/home/davas/Documents/cnn_astro/src/pyFC_lib/pyFC/mathtools.py:141: RuntimeWarning: invalid value encountered in sqrt
+  return (np.exp(s*s) + 2)*np.sqrt(s*s - 1)
+/home/davas/Documents/cnn_astro/src/pyFC_lib/pyFC/mathtools.py:141: RuntimeWarning: invalid value encountered in sqrt
+  return (np.exp(s*s) + 2)*np.sqrt(s*s - 1)
+/home/davas/Documents/cnn_astro/src/pyFC_lib/pyFC/clouds.py:1238: RuntimeWarning: divide by zero encountered in power
+  return np.where(np.greater_equal(np.abs(k), kmin), np.abs(k) ** (beta - 2.), 0)
+/home/davas/Documents/cnn_astro/src/pyFC_lib/pyFC/clouds.py:1238: RuntimeWarning: divide by zero encountered in power
+  return np.where(np.greater_equal(np.abs(k), kmin), np.abs(k) ** (beta - 2.), 0)
+/home/davas/Documents/cnn_astro/src/pyFC_lib/pyFC/mathtools.py:141: RuntimeWarning: invalid value encountered in sqrt
+  return (np.exp(s*s) + 2)*np.sqrt(s*s - 1)
+/home/davas/Documents/cnn_astro/src/pyFC_lib/pyFC/clouds.py:1238: RuntimeWarning: divide by zero encountered in power
+  return np.where(np.greater_equal(np.abs(k), kmin), np.abs(k) ** (beta - 2.), 0)
+/home/davas/Documents/cnn_astro/src/pyFC_lib/pyFC/clouds.py:1238: RuntimeWarning: divide by zero encountered in power
+  return np.where(np.greater_equal(np.abs(k), kmin), np.abs(k) ** (beta - 2.), 0)
+/home/davas/Documents/cnn_astro/src/pyFC_lib/pyFC/mathtools.py:141: RuntimeWarning: invalid value encountered in sqrt
+  return (np.exp(s*s) + 2)*np.sqrt(s*s - 1)
+/home/davas/Documents/cnn_astro/src/pyFC_lib/pyFC/mathtools.py:141: RuntimeWarning: invalid value encountered in sqrt
+  return (np.exp(s*s) + 2)*np.sqrt(s*s - 1)
+/home/davas/Documents/cnn_astro/src/pyFC_lib/pyFC/mathtools.py:141: RuntimeWarning: invalid value encountered in sqrt
+  return (np.exp(s*s) + 2)*np.sqrt(s*s - 1)
+/home/davas/Documents/cnn_astro/src/pyFC_lib/pyFC/mathtools.py:141: RuntimeWarning: invalid value encountered in sqrt
+  return (np.exp(s*s) + 2)*np.sqrt(s*s - 1)
+/home/davas/Documents/cnn_astro/src/pyFC_lib/pyFC/mathtools.py:141: RuntimeWarning: invalid value encountered in sqrt
+  return (np.exp(s*s) + 2)*np.sqrt(s*s - 1)
+/home/davas/Documents/cnn_astro/src/pyFC_lib/pyFC/mathtools.py:141: RuntimeWarning: invalid value encountered in sqrt
+  return (np.exp(s*s) + 2)*np.sqrt(s*s - 1)
+/home/davas/Documents/cnn_astro/src/pyFC_lib/pyFC/mathtools.py:141: RuntimeWarning: invalid value encountered in sqrt
+  return (np.exp(s*s) + 2)*np.sqrt(s*s - 1)
+/home/davas/Documents/cnn_astro/src/pyFC_lib/pyFC/mathtools.py:141: RuntimeWarning: invalid value encountered in sqrt
+  return (np.exp(s*s) + 2)*np.sqrt(s*s - 1)
+/home/davas/Documents/cnn_astro/src/pyFC_lib/pyFC/mathtools.py:141: RuntimeWarning: invalid value encountered in sqrt
+  return (np.exp(s*s) + 2)*np.sqrt(s*s - 1)
+/home/davas/Documents/cnn_astro/src/pyFC_lib/pyFC/mathtools.py:141: RuntimeWarning: invalid value encountered in sqrt
+  return (np.exp(s*s) + 2)*np.sqrt(s*s - 1)
+Batch    1/500 |    200/100000 (  0.2%) |   228.9 img/s | ETA    7.3 min
+Batch    2/500 |    400/100000 (  0.4%) |   234.9 img/s | ETA    7.1 min
+Batch    3/500 |    600/100000 (  0.6%) |   234.5 img/s | ETA    7.1 min
+Batch    4/500 |    800/100000 (  0.8%) |   241.1 img/s | ETA    6.9 min
+Batch    5/500 |   1000/100000 (  1.0%) |   239.9 img/s | ETA    6.9 min
+Batch    6/500 |   1200/100000 (  1.2%) |   241.1 img/s | ETA    6.8 min
+Batch    7/500 |   1400/100000 (  1.4%) |   239.6 img/s | ETA    6.9 min
+Batch    8/500 |   1600/100000 (  1.6%) |   241.4 img/s | ETA    6.8 min
+Batch    9/500 |   1800/100000 (  1.8%) |   241.9 img/s | ETA    6.8 min
+Batch   10/500 |   2000/100000 (  2.0%) |   242.5 img/s | ETA    6.7 min
+Batch   11/500 |   2200/100000 (  2.2%) |   242.3 img/s | ETA    6.7 min
+Batch   12/500 |   2400/100000 (  2.4%) |   239.7 img/s | ETA    6.8 min
+Batch   13/500 |   2600/100000 (  2.6%) |   239.5 img/s | ETA    6.8 min
+Batch   14/500 |   2800/100000 (  2.8%) |   240.1 img/s | ETA    6.7 min
+Batch   15/500 |   3000/100000 (  3.0%) |   239.5 img/s | ETA    6.8 min
+Batch   16/500 |   3200/100000 (  3.2%) |   240.2 img/s | ETA    6.7 min
+Batch   17/500 |   3400/100000 (  3.4%) |   240.3 img/s | ETA    6.7 min
+Batch   18/500 |   3600/100000 (  3.6%) |   241.1 img/s | ETA    6.7 min
+Batch   19/500 |   3800/100000 (  3.8%) |   240.5 img/s | ETA    6.7 min
+Batch   20/500 |   4000/100000 (  4.0%) |   240.8 img/s | ETA    6.6 min
+Batch   21/500 |   4200/100000 (  4.2%) |   241.2 img/s | ETA    6.6 min
+Batch   22/500 |   4400/100000 (  4.4%) |   241.4 img/s | ETA    6.6 min
+Batch   23/500 |   4600/100000 (  4.6%) |   241.5 img/s | ETA    6.6 min
+Batch   24/500 |   4800/100000 (  4.8%) |   242.0 img/s | ETA    6.6 min
+Batch   25/500 |   5000/100000 (  5.0%) |   242.1 img/s | ETA    6.5 min
+Batch   26/500 |   5200/100000 (  5.2%) |   242.4 img/s | ETA    6.5 min
+Batch   27/500 |   5400/100000 (  5.4%) |   242.3 img/s | ETA    6.5 min
+Batch   28/500 |   5600/100000 (  5.6%) |   241.9 img/s | ETA    6.5 min
+Batch   29/500 |   5800/100000 (  5.8%) |   242.0 img/s | ETA    6.5 min
+Batch   30/500 |   6000/100000 (  6.0%) |   242.4 img/s | ETA    6.5 min
+Batch   31/500 |   6200/100000 (  6.2%) |   242.6 img/s | ETA    6.4 min
+Batch   32/500 |   6400/100000 (  6.4%) |   242.5 img/s | ETA    6.4 min
+Batch   33/500 |   6600/100000 (  6.6%) |   242.6 img/s | ETA    6.4 min
+Batch   34/500 |   6800/100000 (  6.8%) |   242.7 img/s | ETA    6.4 min
+Batch   35/500 |   7000/100000 (  7.0%) |   242.7 img/s | ETA    6.4 min
+Batch   36/500 |   7200/100000 (  7.2%) |   242.7 img/s | ETA    6.4 min
+Batch   37/500 |   7400/100000 (  7.4%) |   242.9 img/s | ETA    6.4 min
+Batch   38/500 |   7600/100000 (  7.6%) |   242.3 img/s | ETA    6.4 min
+Batch   39/500 |   7800/100000 (  7.8%) |   242.2 img/s | ETA    6.3 min
+Batch   40/500 |   8000/100000 (  8.0%) |   242.3 img/s | ETA    6.3 min
+Batch   41/500 |   8200/100000 (  8.2%) |   242.5 img/s | ETA    6.3 min
+Batch   42/500 |   8400/100000 (  8.4%) |   242.7 img/s | ETA    6.3 min
+Batch   43/500 |   8600/100000 (  8.6%) |   242.7 img/s | ETA    6.3 min
+Batch   44/500 |   8800/100000 (  8.8%) |   242.7 img/s | ETA    6.3 min
+Batch   45/500 |   9000/100000 (  9.0%) |   242.7 img/s | ETA    6.3 min
+Batch   46/500 |   9200/100000 (  9.2%) |   242.3 img/s | ETA    6.2 min
+Batch   47/500 |   9400/100000 (  9.4%) |   242.3 img/s | ETA    6.2 min
+Batch   48/500 |   9600/100000 (  9.6%) |   242.3 img/s | ETA    6.2 min
+Batch   49/500 |   9800/100000 (  9.8%) |   242.3 img/s | ETA    6.2 min
+Batch   50/500 |  10000/100000 ( 10.0%) |   242.2 img/s | ETA    6.2 min
+Batch   51/500 |  10200/100000 ( 10.2%) |   242.2 img/s | ETA    6.2 min
+Batch   52/500 |  10400/100000 ( 10.4%) |   242.3 img/s | ETA    6.2 min
+Batch   53/500 |  10600/100000 ( 10.6%) |   242.5 img/s | ETA    6.1 min
+Batch   54/500 |  10800/100000 ( 10.8%) |   242.4 img/s | ETA    6.1 min
+Batch   55/500 |  11000/100000 ( 11.0%) |   242.4 img/s | ETA    6.1 min
+Batch   56/500 |  11200/100000 ( 11.2%) |   242.2 img/s | ETA    6.1 min
+Batch   57/500 |  11400/100000 ( 11.4%) |   241.9 img/s | ETA    6.1 min
+Batch   58/500 |  11600/100000 ( 11.6%) |   241.9 img/s | ETA    6.1 min
+Batch   59/500 |  11800/100000 ( 11.8%) |   241.9 img/s | ETA    6.1 min
+Batch   60/500 |  12000/100000 ( 12.0%) |   242.1 img/s | ETA    6.1 min
+Batch   61/500 |  12200/100000 ( 12.2%) |   242.3 img/s | ETA    6.0 min
+Batch   62/500 |  12400/100000 ( 12.4%) |   242.3 img/s | ETA    6.0 min
+Batch   63/500 |  12600/100000 ( 12.6%) |   242.2 img/s | ETA    6.0 min
+Batch   64/500 |  12800/100000 ( 12.8%) |   242.3 img/s | ETA    6.0 min
+Batch   65/500 |  13000/100000 ( 13.0%) |   242.3 img/s | ETA    6.0 min
+Batch   66/500 |  13200/100000 ( 13.2%) |   235.8 img/s | ETA    6.1 min
+Batch   67/500 |  13400/100000 ( 13.4%) |   232.9 img/s | ETA    6.2 min
+Batch   68/500 |  13600/100000 ( 13.6%) |   229.4 img/s | ETA    6.3 min
+Batch   69/500 |  13800/100000 ( 13.8%) |   225.2 img/s | ETA    6.4 min
+Batch   70/500 |  14000/100000 ( 14.0%) |   222.7 img/s | ETA    6.4 min
+Batch   71/500 |  14200/100000 ( 14.2%) |   219.8 img/s | ETA    6.5 min
+Batch   72/500 |  14400/100000 ( 14.4%) |   217.5 img/s | ETA    6.6 min
+Batch   73/500 |  14600/100000 ( 14.6%) |   215.4 img/s | ETA    6.6 min
+Batch   74/500 |  14800/100000 ( 14.8%) |   212.4 img/s | ETA    6.7 min
+Batch   75/500 |  15000/100000 ( 15.0%) |   209.7 img/s | ETA    6.8 min
+Batch   76/500 |  15200/100000 ( 15.2%) |   206.9 img/s | ETA    6.8 min
+Batch   77/500 |  15400/100000 ( 15.4%) |   205.6 img/s | ETA    6.9 min
+Batch   78/500 |  15600/100000 ( 15.6%) |   203.9 img/s | ETA    6.9 min
+Batch   79/500 |  15800/100000 ( 15.8%) |   201.8 img/s | ETA    7.0 min
+Batch   80/500 |  16000/100000 ( 16.0%) |   200.5 img/s | ETA    7.0 min
+Batch   81/500 |  16200/100000 ( 16.2%) |   199.1 img/s | ETA    7.0 min
+Batch   82/500 |  16400/100000 ( 16.4%) |   197.5 img/s | ETA    7.1 min
+Batch   83/500 |  16600/100000 ( 16.6%) |   196.0 img/s | ETA    7.1 min
+Batch   84/500 |  16800/100000 ( 16.8%) |   194.8 img/s | ETA    7.1 min
+Batch   85/500 |  17000/100000 ( 17.0%) |   193.5 img/s | ETA    7.1 min
+Batch   86/500 |  17200/100000 ( 17.2%) |   192.2 img/s | ETA    7.2 min
+Batch   87/500 |  17400/100000 ( 17.4%) |   191.0 img/s | ETA    7.2 min
+Batch   88/500 |  17600/100000 ( 17.6%) |   189.7 img/s | ETA    7.2 min
+Batch   89/500 |  17800/100000 ( 17.8%) |   188.8 img/s | ETA    7.3 min
+Batch   90/500 |  18000/100000 ( 18.0%) |   187.8 img/s | ETA    7.3 min
+Batch   91/500 |  18200/100000 ( 18.2%) |   186.9 img/s | ETA    7.3 min
+Batch   92/500 |  18400/100000 ( 18.4%) |   186.1 img/s | ETA    7.3 min
+Batch   93/500 |  18600/100000 ( 18.6%) |   185.0 img/s | ETA    7.3 min
+Batch   94/500 |  18800/100000 ( 18.8%) |   184.2 img/s | ETA    7.3 min
+Batch   95/500 |  19000/100000 ( 19.0%) |   183.4 img/s | ETA    7.4 min
+Batch   96/500 |  19200/100000 ( 19.2%) |   182.5 img/s | ETA    7.4 min
+Batch   97/500 |  19400/100000 ( 19.4%) |   181.7 img/s | ETA    7.4 min
+Batch   98/500 |  19600/100000 ( 19.6%) |   180.8 img/s | ETA    7.4 min
+Batch   99/500 |  19800/100000 ( 19.8%) |   179.9 img/s | ETA    7.4 min
+Batch  100/500 |  20000/100000 ( 20.0%) |   179.0 img/s | ETA    7.4 min
+Batch  101/500 |  20200/100000 ( 20.2%) |   178.4 img/s | ETA    7.5 min
+Batch  102/500 |  20400/100000 ( 20.4%) |   177.7 img/s | ETA    7.5 min
+Batch  103/500 |  20600/100000 ( 20.6%) |   176.8 img/s | ETA    7.5 min
+Batch  104/500 |  20800/100000 ( 20.8%) |   176.2 img/s | ETA    7.5 min
+Batch  105/500 |  21000/100000 ( 21.0%) |   175.5 img/s | ETA    7.5 min
+Batch  106/500 |  21200/100000 ( 21.2%) |   174.9 img/s | ETA    7.5 min
+Batch  107/500 |  21400/100000 ( 21.4%) |   174.1 img/s | ETA    7.5 min
+Batch  108/500 |  21600/100000 ( 21.6%) |   173.5 img/s | ETA    7.5 min
+Batch  109/500 |  21800/100000 ( 21.8%) |   173.0 img/s | ETA    7.5 min
+Batch  110/500 |  22000/100000 ( 22.0%) |   172.3 img/s | ETA    7.5 min
+Batch  111/500 |  22200/100000 ( 22.2%) |   171.6 img/s | ETA    7.6 min
+Batch  112/500 |  22400/100000 ( 22.4%) |   171.0 img/s | ETA    7.6 min
+Batch  113/500 |  22600/100000 ( 22.6%) |   170.4 img/s | ETA    7.6 min
