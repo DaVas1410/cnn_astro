@@ -6,14 +6,15 @@ import pytest
 
 @pytest.fixture
 def fake_cfg(tmp_path):
+    rng = np.random.default_rng(42)
     h5_path = tmp_path / 'fake.h5'
     n = 40
     with h5py.File(h5_path, 'w') as hf:
-        hf.create_dataset('images', data=np.random.randn(n, 128, 128).astype(np.float32))
+        hf.create_dataset('images', data=rng.standard_normal((n, 128, 128)).astype(np.float32))
         grp = hf.create_group('parameters')
-        grp.create_dataset('k_min',  data=np.random.uniform(1, 62, n).astype(np.float32))
-        grp.create_dataset('k_max',  data=np.random.uniform(5, 64, n).astype(np.float32))
-        grp.create_dataset('sigma',  data=np.random.uniform(0.01, 5.0, n).astype(np.float32))
+        grp.create_dataset('k_min',  data=rng.uniform(1, 62, n).astype(np.float32))
+        grp.create_dataset('k_max',  data=rng.uniform(5, 64, n).astype(np.float32))
+        grp.create_dataset('sigma',  data=rng.uniform(0.01, 5.0, n).astype(np.float32))
 
     return {
         'hpc': {'project_dir': str(tmp_path)},

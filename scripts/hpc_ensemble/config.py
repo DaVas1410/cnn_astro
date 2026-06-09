@@ -9,7 +9,9 @@ def load_config(path: str) -> dict:
 
 
 def output_dir(cfg: dict, member_id: int = None) -> Path:
-    base = Path(cfg['hpc']['project_dir']) / cfg['output']['dir']
+    out = Path(cfg['output']['dir'])
+    if not out.is_absolute():
+        out = Path(cfg['hpc']['project_dir']) / out
     if member_id is not None:
-        return base / f'member_{member_id}'
-    return base
+        return out / f'member_{member_id}'
+    return out
