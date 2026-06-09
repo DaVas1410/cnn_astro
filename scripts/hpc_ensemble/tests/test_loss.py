@@ -31,7 +31,7 @@ def test_k_max_upweighted():
     equal_weights = WeightedGaussianNLL(weights=[1.0, 1.0, 1.0])
     kmax_upweighted = WeightedGaussianNLL(weights=[1.0, 2.0, 1.0])
     # Create pred/target with equal errors across all params
-    pred = torch.zeros(4, 3, 2)   # mu=sigmoid(0)=0.5, log_sigma=0
+    pred = torch.zeros(4, 3, 2)   # mu=0.0 (raw), log_sigma=0
     target = torch.ones(4, 3) * 0.8  # constant offset from mu
     loss_equal = equal_weights(pred, target)
     loss_upweighted = kmax_upweighted(pred, target)
@@ -51,9 +51,9 @@ def test_lower_sigma_increases_loss_for_large_error(loss_fn):
     """When prediction error is large, lower sigma should penalise more than larger sigma."""
     # Large error between target and mu
     target = torch.ones(4, 3) * 0.9
-    # pred_a: mu=0.5 (sigmoid(0)), log_sigma=0 → sigma≈1.31 (softplus(0))
+    # pred_a: mu=0.0 (raw), log_sigma=0 → sigma≈0.693 (softplus(0))
     pred_a = torch.zeros(4, 3, 2)
-    # pred_b: mu=0.5, log_sigma=-2 → smaller sigma → larger NLL when error is large
+    # pred_b: mu=0.0 (raw), log_sigma=-2 → smaller sigma → larger NLL when error is large
     pred_b = torch.zeros(4, 3, 2)
     pred_b[..., 1] = -2.0
     loss_a = loss_fn(pred_a, target)
