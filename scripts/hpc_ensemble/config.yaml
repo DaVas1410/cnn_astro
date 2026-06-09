@@ -1,0 +1,47 @@
+# scripts/hpc_ensemble/config.yaml
+
+# ── HPC SETTINGS (professor configures these) ──────────────────────
+hpc:
+  partition: "gpu"               # CHANGE: GPU partition name
+  gpus_per_task: 1               # CHANGE: GPUs per member job
+  cpus_per_task: 8               # CHANGE: CPUs for data loading workers
+  mem_gb: 32                     # CHANGE: RAM per job in GB
+  time_limit: "06:00:00"         # CHANGE: wall-clock limit per member (HH:MM:SS)
+  conda_env: "py311"             # CHANGE: conda environment name on HPC
+  project_dir: "/path/to/cnn_astro"  # CHANGE: absolute path to project root on HPC
+
+# ── TRAINING ────────────────────────────────────────────────────────
+training:
+  epochs: 80
+  batch_size: 64
+  lr: 1.0e-4
+  weight_decay: 1.0e-4
+  base_seed: 42                  # member i uses seed = base_seed + i (i.e. 42, 43, ..., 46)
+
+# ── ENSEMBLE ────────────────────────────────────────────────────────
+ensemble:
+  n_members: 5
+
+# ── LOSS WEIGHTS ────────────────────────────────────────────────────
+loss_weights:
+  k_min: 1.0
+  k_max: 2.0                     # upweighted — primary accuracy target
+  sigma: 1.0
+
+# ── DATA ────────────────────────────────────────────────────────────
+data:
+  file: "data/raw/uniform_kmin_128x128_100000.h5"
+  val_split: 0.1
+  test_split: 0.1
+  img_p1: -2.0818
+  img_p99: 0.9409
+  kmin_lo: 1.0
+  kmin_hi: 62.0
+  kmax_lo: 5.0
+  kmax_hi: 64.0
+  log_sigma_lo: -4.6052          # log(0.01)
+  log_sigma_hi: 1.6094           # log(5.0)
+
+# ── OUTPUT ──────────────────────────────────────────────────────────
+output:
+  dir: "outputs/hpc_ensemble"
