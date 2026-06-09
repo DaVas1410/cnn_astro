@@ -37,12 +37,22 @@ class JointHDF5Dataset(Dataset):
         img = (img - self.img_p1) / self.img_range
         return torch.from_numpy(img[np.newaxis]), torch.from_numpy(self.labels[idx])
 
-    def __del__(self):
+    def close(self):
         if self._h5 is not None:
             try:
                 self._h5.close()
             except Exception:
                 pass
+            self._h5 = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
+
+    def __del__(self):
+        self.close()
 
 
 def denorm(pred_norm: np.ndarray, cfg: dict) -> Dict[str, np.ndarray]:
