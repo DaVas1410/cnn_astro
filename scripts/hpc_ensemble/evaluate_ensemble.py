@@ -10,7 +10,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.stats
 import torch
-import torch.nn.functional as F
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from torch.utils.data import DataLoader
 
@@ -46,7 +45,7 @@ def combine_ensemble(member_preds: list) -> dict:
     """
     mus        = np.stack([p[..., 0] for p in member_preds])   # (M, N, 3)
     log_sigmas = np.stack([p[..., 1] for p in member_preds])   # (M, N, 3)
-    sigmas = np.logaddexp(0, log_sigmas)                        # softplus: log(1+exp(x)), numerically stable (M, N, 3)
+    sigmas = np.logaddexp(0, log_sigmas) + 1e-6                 # softplus + floor, matches loss.py (M, N, 3)
 
     mu_ens          = mus.mean(axis=0)                         # (N, 3)
     sigma_aleatoric = np.sqrt((sigmas ** 2).mean(axis=0))      # (N, 3)
@@ -182,13 +181,12 @@ def main():
     results = {
         'metrics': metrics,
         'n_members': n_members,
-        'ensemble': {
-            'mu':              ens['mu'].tolist(),
-            'sigma_total':     ens['sigma_total'].tolist(),
-            'sigma_aleatoric': ens['sigma_aleatoric'].tolist(),
-            'sigma_epistemic': ens['sigma_epistemic'].tolist(),
-        },
-        'y_true_norm': y_true_norm.tolist(),
+        'params': PARAMS,
+        'y_true':              {p: y_true[p].tolist() for p in PARAMS},
+        'y_pred':              {p: y_pred[p].tolist() for p in PARAMS},
+        'sigma_total':         {p: y_sigma_total[p].tolist() for p in PARAMS},
+        'sigma_aleatoric':     {p: y_sigma_aleatoric[p].tolist() for p in PARAMS},
+        'sigma_epistemic':     {p: y_sigma_epistemic[p].tolist() for p in PARAMS},
     }
     with open(base_dir / 'results.json', 'w') as f:
         json.dump(results, f)
