@@ -1,8 +1,22 @@
 # BUG: pyFC `LogNormalFractalCube` ignores `kmax` (no upper spectral cutoff)
 
-**Status:** Open — fix identified & verified, not yet applied
+**Status:** FIXED in `src/pyFC_lib/pyFC/clouds.py` (2026-06-25) + regression test
+`tests/test_pyfc_band_limit.py`. Existing datasets still need regeneration.
 **Severity:** High — corrupts the `k_max` label of every LogNormal dataset
 **Found:** 2026-06-25, during synthetic validation of the joint-regression CNN
+
+## Verification of the fix (pilot dataset)
+
+A 3000-image pilot regenerated with the fixed pyFC
+(`data/raw/pilot_kmax_fixed_128x128_3000.h5`) gives a **razor-sharp** spectral
+cutoff exactly at kmax (in-band power → ~1e-17 above kmax). The classical
+band-edge estimator now recovers, on the pilot:
+
+- k_min: R² = 0.999 (unchanged)
+- k_max: R² = 0.978, MAE = 0.69 (floor-based upper edge at 1e-12 × peak)
+
+vs the broken dataset where k_max was R² negative / unrecoverable. Confirms the
+bug was the root cause of the CNN's weak k_max and that regeneration fixes it.
 
 ## Summary
 
