@@ -182,6 +182,40 @@ n_dropped = int((~classical_valid).sum())
 print(f'classical valid: {classical_valid.sum()}/{len(classical_valid)}  dropped(NaN): {n_dropped}')
 ''')
 
+code('''# Metrics — MAE / RMSE / R2 / bias
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+
+def compute_metrics(y_true, y_pred):
+    return {
+        'mae':  float(mean_absolute_error(y_true, y_pred)),
+        'rmse': float(np.sqrt(mean_squared_error(y_true, y_pred))),
+        'r2':   float(r2_score(y_true, y_pred)),
+        'bias': float(np.mean(y_pred - y_true)),
+        'n':    int(len(y_true)),
+    }
+
+metrics = {'cnn': {}, 'classical': {}, 'n_eval': int(len(gt['k_min'])),
+           'n_dropped_classical': n_dropped}
+
+for p in ['k_min', 'k_max', 'sigma']:                 # CNN: all three
+    metrics['cnn'][p] = compute_metrics(gt[p], cnn_pred[p])
+
+for p in ['k_min', 'k_max']:                          # Classical: k_min/k_max only, valid rows
+    m = classical_valid
+    metrics['classical'][p] = compute_metrics(gt[p][m], classical_pred[p][m])
+
+with open(OUT_DIR / 'metrics.json', 'w') as f:
+    json.dump(metrics, f, indent=2)
+
+print(f"{'PARAM':<7} {'CNN_R2':>8} {'CNN_MAE':>9} {'CLS_R2':>8} {'CLS_MAE':>9}")
+for p in ['k_min', 'k_max', 'sigma']:
+    c = metrics['cnn'][p]
+    cl = metrics['classical'].get(p)
+    cls_r2  = f"{cl['r2']:.4f}"  if cl else '   --   '
+    cls_mae = f"{cl['mae']:.3f}" if cl else '   --   '
+    print(f"{p:<7} {c['r2']:>8.4f} {c['mae']:>9.3f} {cls_r2:>8} {cls_mae:>9}")
+''')
+
 def build():
     nb = nbf.v4.new_notebook()
     nb.cells = [nbf.v4.new_markdown_cell(s) if t == 'md' else nbf.v4.new_code_cell(s)
