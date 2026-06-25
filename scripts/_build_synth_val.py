@@ -63,6 +63,39 @@ N_EVAL = int(os.environ.get('SYNTH_VAL_N_EVAL', 2000))
 print(f'Device={DEVICE}  IMG_P1={IMG_P1:.4f}  IMG_P99={IMG_P99:.4f}  N_EVAL={N_EVAL}')
 ''')
 
+code('''# Load held-out synthetic test images + ground truth (same split as training)
+with h5py.File(DATA_FILE, 'r') as hf:
+    n_total = hf['images'].shape[0]
+    kmin_all  = hf['parameters/k_min'][:]
+    kmax_all  = hf['parameters/k_max'][:]
+    sigma_all = hf['parameters/sigma'][:]
+    beta_all  = hf['parameters/beta'][:]
+
+indices = np.arange(n_total)
+train_idx, tmp = train_test_split(indices, test_size=0.2, random_state=SEED)
+val_idx, test_idx = train_test_split(tmp,   test_size=0.5, random_state=SEED)
+
+# Honesty check: eval indices must not appear in the training split
+assert len(np.intersect1d(test_idx, train_idx)) == 0
+
+eval_idx = np.sort(test_idx[:min(N_EVAL, len(test_idx))])
+
+with h5py.File(DATA_FILE, 'r') as hf:
+    imgs_raw = hf['images'][eval_idx].astype(np.float32)        # (N,128,128) stored log10
+
+imgs_norm = ((imgs_raw - IMG_P1) / IMG_RANGE)[:, None, :, :]    # (N,1,128,128)
+
+gt = {
+    'k_min': kmin_all[eval_idx].astype(np.float64),
+    'k_max': kmax_all[eval_idx].astype(np.float64),
+    'sigma': sigma_all[eval_idx].astype(np.float64),
+    'beta':  beta_all[eval_idx].astype(np.float64),
+}
+print(f'eval images: {imgs_raw.shape}   test split size: {len(test_idx):,}')
+print(f'gt k_max range: [{gt["k_max"].min():.2f}, {gt["k_max"].max():.2f}]  '
+      f'sigma range: [{gt["sigma"].min():.3f}, {gt["sigma"].max():.3f}]')
+''')
+
 def build():
     nb = nbf.v4.new_notebook()
     nb.cells = [nbf.v4.new_markdown_cell(s) if t == 'md' else nbf.v4.new_code_cell(s)
