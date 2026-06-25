@@ -141,13 +141,29 @@ print('CNN pred k_max[:5]:', np.round(cnn_pred['k_max'][:5], 2))
 print('CNN pred sigma[:5]:', np.round(cnn_pred['sigma'][:5], 3))
 ''')
 
-code('''# Classical estimator — azimuthal power-spectrum (reused from io-fits.ipynb)
+code('''# Classical estimator — band edges of the azimuthal power spectrum.
+# pyFC fractal images are band-limited: power lives within [k_min, k_max].
+# k_min = lower band edge (the spectrum peaks at k_min and is zero below it).
+# k_max = upper band edge = the sharp spectral cutoff (power -> ~0 above k_max).
+#
+# This replaces the earlier inertial-range power-law fit (fourier_params), which
+# is meant for real turbulent clouds and is anti-correlated with the true band
+# edges of synthetic data.
+#
+# NOTE on k_max: recovering it requires the data to be genuinely band-limited at
+# k_max. Datasets generated before the pyFC k_max fix
+# (docs/bugs/pyfc-kmax-not-enforced.md) have NO upper cutoff, so classical k_max
+# is poor on them (k_min stays excellent). Data regenerated with the fix restores
+# it — a 3000-image pilot gives classical k_max R^2 ~ 0.98.
 from numpy.fft import fft2, fftshift
-from scipy.stats import linregress as _lr
 
-def fourier_params(img2d, k_lo_frac=0.05, k_hi_frac=0.70, thr=0.5):
-    """Spectral index alpha + k_min/k_max from the azimuthal power spectrum.
-    Returns NaNs when the inertial-range fit has < 3 usable points."""
+def band_edge_params(img2d, lo_frac=0.1, hi_floor=1e-12):
+    """k_min / k_max from the band edges of the azimuthal power spectrum.
+
+    k_min = lowest k with power >= lo_frac * peak (peak sits at the lower edge).
+    k_max = highest k with power > hi_floor * peak (the sharp upper cutoff).
+    Returns NaNs for an empty spectrum.
+    """
     F = fftshift(fft2(img2d.astype(np.float64)))
     P = np.abs(F) ** 2
     ny, nx = P.shape
@@ -157,22 +173,21 @@ def fourier_params(img2d, k_lo_frac=0.05, k_hi_frac=0.70, thr=0.5):
     km  = min(cx, cy)
     kr  = np.arange(1, km)
     Pr  = np.array([P[r_i == k].mean() if (r_i == k).any() else 0.0 for k in kr])
-    klo = max(2, int(k_lo_frac * km)); khi = int(k_hi_frac * km)
-    mf  = (kr >= klo) & (kr <= khi) & (Pr > 0)
-    if mf.sum() < 3:
-        return {'alpha': np.nan, 'k_min': np.nan, 'k_max': np.nan}
-    sl, ic, _, _, _ = _lr(np.log10(kr[mf].astype(float)), np.log10(Pr[mf]))
-    res = np.log10(Pr + 1e-30) - (ic + sl * np.log10(kr.astype(float)))
-    inr = np.abs(res) < thr
-    return {'alpha': sl,
-            'k_min': float(kr[inr][0])  if inr.any() else float(klo),
-            'k_max': float(kr[inr][-1]) if inr.any() else float(khi)}
+    pk  = Pr.max()
+    if pk <= 0:
+        return {'k_min': np.nan, 'k_max': np.nan}
+    Pn  = Pr / pk
+    lo  = np.where(Pn >= lo_frac)[0]
+    hi  = np.where(Pn > hi_floor)[0]
+    if len(lo) == 0 or len(hi) == 0:
+        return {'k_min': np.nan, 'k_max': np.nan}
+    return {'k_min': float(kr[lo[0]]), 'k_max': float(kr[hi[-1]])}
 ''')
 
 code('''# Run classical inference on every eval image
 _c_kmin, _c_kmax = [], []
 for img in imgs_raw:
-    fp = fourier_params(img)
+    fp = band_edge_params(img)
     _c_kmin.append(fp['k_min'])
     _c_kmax.append(fp['k_max'])
 classical_pred = {'k_min': np.array(_c_kmin, dtype=np.float64),
