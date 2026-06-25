@@ -216,6 +216,67 @@ for p in ['k_min', 'k_max', 'sigma']:
     print(f"{p:<7} {c['r2']:>8.4f} {c['mae']:>9.3f} {cls_r2:>8} {cls_mae:>9}")
 ''')
 
+code('''# Figure 1 — pred-vs-true scatter (CNN + classical overlaid)
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+PARAMS = ['k_min', 'k_max', 'sigma']
+fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+for ax, p in zip(axes, PARAMS):
+    ax.scatter(gt[p], cnn_pred[p], s=6, alpha=0.3, color='#1565C0', label='CNN', rasterized=True)
+    if p in classical_pred:
+        m = classical_valid
+        ax.scatter(gt[p][m], classical_pred[p][m], s=6, alpha=0.3, color='#EF6C00',
+                   label='Classical', rasterized=True)
+    lims = [min(gt[p].min(), cnn_pred[p].min()), max(gt[p].max(), cnn_pred[p].max())]
+    ax.plot(lims, lims, 'k--', linewidth=1)
+    c = metrics['cnn'][p]
+    ax.set_xlabel(f'True {p}'); ax.set_ylabel(f'Pred {p}')
+    ax.set_title(f"{p}\\nCNN R2={c['r2']:.4f} MAE={c['mae']:.3f}")
+    ax.legend(fontsize=8); ax.grid(True, alpha=0.3)
+plt.suptitle('Predicted vs True — Synthetic (in-distribution)', fontweight='bold')
+plt.tight_layout(); plt.savefig(OUT_DIR / 'scatter.png', dpi=150, bbox_inches='tight'); plt.close()
+print('wrote scatter.png')
+''')
+
+code('''# Figure 2 — residual histograms (CNN)
+fig, axes = plt.subplots(1, 3, figsize=(15, 4))
+for ax, p in zip(axes, PARAMS):
+    res = cnn_pred[p] - gt[p]
+    ax.hist(res, bins=60, color='#1565C0', alpha=0.8, edgecolor='white', linewidth=0.3)
+    ax.axvline(0, color='black', linestyle='--', linewidth=1)
+    ax.axvline(res.mean(), color='red', linestyle='--', linewidth=1,
+               label=f'mean={res.mean():.3f} std={res.std():.3f}')
+    ax.set_xlabel(f'Residual (pred - true {p})'); ax.set_ylabel('Count')
+    ax.set_title(p); ax.legend(fontsize=8); ax.grid(True, alpha=0.3)
+plt.suptitle('CNN Residuals — Synthetic', fontweight='bold')
+plt.tight_layout(); plt.savefig(OUT_DIR / 'residuals.png', dpi=150, bbox_inches='tight'); plt.close()
+print('wrote residuals.png')
+''')
+
+code('''# Figure 3 — DIAGNOSTIC: CNN MAE binned by true value of k_max and sigma
+fig, axes = plt.subplots(1, 2, figsize=(13, 4.5))
+for ax, p in zip(axes, ['k_max', 'sigma']):
+    yt = gt[p]
+    abs_err = np.abs(cnn_pred[p] - yt)
+    bins = np.linspace(yt.min(), yt.max(), 11)
+    idx  = np.digitize(yt, bins) - 1
+    idx  = np.clip(idx, 0, len(bins) - 2)
+    centers, mae_bin = [], []
+    for b in range(len(bins) - 1):
+        sel = idx == b
+        if sel.any():
+            centers.append(0.5 * (bins[b] + bins[b+1]))
+            mae_bin.append(abs_err[sel].mean())
+    ax.plot(centers, mae_bin, 'o-', color='#C62828')
+    ax.set_xlabel(f'True {p}'); ax.set_ylabel('CNN MAE')
+    ax.set_title(f'CNN error vs true {p}'); ax.grid(True, alpha=0.3)
+plt.suptitle('Diagnostic — where the CNN fails (input for 2nd training)', fontweight='bold')
+plt.tight_layout(); plt.savefig(OUT_DIR / 'cnn_error_by_value.png', dpi=150, bbox_inches='tight'); plt.close()
+print('wrote cnn_error_by_value.png')
+''')
+
 def build():
     nb = nbf.v4.new_notebook()
     nb.cells = [nbf.v4.new_markdown_cell(s) if t == 'md' else nbf.v4.new_code_cell(s)
