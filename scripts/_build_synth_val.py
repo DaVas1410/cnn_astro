@@ -141,6 +141,47 @@ print('CNN pred k_max[:5]:', np.round(cnn_pred['k_max'][:5], 2))
 print('CNN pred sigma[:5]:', np.round(cnn_pred['sigma'][:5], 3))
 ''')
 
+code('''# Classical estimator — azimuthal power-spectrum (reused from io-fits.ipynb)
+from numpy.fft import fft2, fftshift
+from scipy.stats import linregress as _lr
+
+def fourier_params(img2d, k_lo_frac=0.05, k_hi_frac=0.70, thr=0.5):
+    """Spectral index alpha + k_min/k_max from the azimuthal power spectrum.
+    Returns NaNs when the inertial-range fit has < 3 usable points."""
+    F = fftshift(fft2(img2d.astype(np.float64)))
+    P = np.abs(F) ** 2
+    ny, nx = P.shape
+    cy, cx = ny // 2, nx // 2
+    y_i, x_i = np.mgrid[:ny, :nx]
+    r_i = np.sqrt((x_i - cx)**2 + (y_i - cy)**2).astype(int)
+    km  = min(cx, cy)
+    kr  = np.arange(1, km)
+    Pr  = np.array([P[r_i == k].mean() if (r_i == k).any() else 0.0 for k in kr])
+    klo = max(2, int(k_lo_frac * km)); khi = int(k_hi_frac * km)
+    mf  = (kr >= klo) & (kr <= khi) & (Pr > 0)
+    if mf.sum() < 3:
+        return {'alpha': np.nan, 'k_min': np.nan, 'k_max': np.nan}
+    sl, ic, _, _, _ = _lr(np.log10(kr[mf].astype(float)), np.log10(Pr[mf]))
+    res = np.log10(Pr + 1e-30) - (ic + sl * np.log10(kr.astype(float)))
+    inr = np.abs(res) < thr
+    return {'alpha': sl,
+            'k_min': float(kr[inr][0])  if inr.any() else float(klo),
+            'k_max': float(kr[inr][-1]) if inr.any() else float(khi)}
+''')
+
+code('''# Run classical inference on every eval image
+_c_kmin, _c_kmax = [], []
+for img in imgs_raw:
+    fp = fourier_params(img)
+    _c_kmin.append(fp['k_min'])
+    _c_kmax.append(fp['k_max'])
+classical_pred = {'k_min': np.array(_c_kmin, dtype=np.float64),
+                  'k_max': np.array(_c_kmax, dtype=np.float64)}
+classical_valid = np.isfinite(classical_pred['k_min']) & np.isfinite(classical_pred['k_max'])
+n_dropped = int((~classical_valid).sum())
+print(f'classical valid: {classical_valid.sum()}/{len(classical_valid)}  dropped(NaN): {n_dropped}')
+''')
+
 def build():
     nb = nbf.v4.new_notebook()
     nb.cells = [nbf.v4.new_markdown_cell(s) if t == 'md' else nbf.v4.new_code_cell(s)
