@@ -96,6 +96,51 @@ print(f'gt k_max range: [{gt["k_max"].min():.2f}, {gt["k_max"].max():.2f}]  '
       f'sigma range: [{gt["sigma"].min():.3f}, {gt["sigma"].max():.3f}]')
 ''')
 
+code('''# CNN model — identical architecture to joint_regression_v2.ipynb
+class ResNet50Joint4(nn.Module):
+    def __init__(self, in_channels=1, n_outputs=4):
+        super().__init__()
+        self.backbone = models.resnet50(weights=None)
+        self.backbone.conv1 = nn.Conv2d(in_channels, 64, kernel_size=7, stride=2, padding=3, bias=False)
+        in_feats = self.backbone.fc.in_features
+        self.backbone.fc = nn.Sequential(
+            nn.Linear(in_feats, 256), nn.ReLU(), nn.Dropout(0.3),
+            nn.Linear(256, 64),       nn.ReLU(), nn.Dropout(0.2),
+            nn.Linear(64, n_outputs),
+            nn.Sigmoid(),
+        )
+    def forward(self, x):
+        return self.backbone(x)
+
+def _back(col, lo, hi):
+    return col * (hi - lo) + lo
+
+def denorm_preds(preds_n):
+    """Map (N,4) Sigmoid outputs in [0,1] back to physical units."""
+    return {
+        'k_min': _back(preds_n[:, 0], KMIN_LO, KMIN_HI),
+        'k_max': _back(preds_n[:, 1], KMAX_LO, KMAX_HI),
+        'sigma': np.exp(_back(preds_n[:, 2], LOG_SIG_LO, LOG_SIG_HI)),
+        'beta':  _back(preds_n[:, 3], BETA_LO, BETA_HI),
+    }
+''')
+
+code('''# Run CNN inference on the eval images
+model = ResNet50Joint4(in_channels=1).to(DEVICE)
+model.load_state_dict(torch.load(CKPT, map_location=DEVICE))
+model.eval()
+
+preds_n = []
+with torch.no_grad():
+    for i in range(0, len(imgs_norm), 256):
+        batch = torch.from_numpy(imgs_norm[i:i+256]).to(DEVICE)
+        preds_n.append(model(batch).cpu().numpy())
+preds_n = np.concatenate(preds_n, axis=0)            # (N,4) in [0,1]
+cnn_pred = {k: v.astype(np.float64) for k, v in denorm_preds(preds_n).items()}
+print('CNN pred k_max[:5]:', np.round(cnn_pred['k_max'][:5], 2))
+print('CNN pred sigma[:5]:', np.round(cnn_pred['sigma'][:5], 3))
+''')
+
 def build():
     nb = nbf.v4.new_notebook()
     nb.cells = [nbf.v4.new_markdown_cell(s) if t == 'md' else nbf.v4.new_code_cell(s)
