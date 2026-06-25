@@ -19,7 +19,10 @@
 - Split (verbatim, matches the trained model): `SEED = 42`; `train_idx, tmp = train_test_split(np.arange(n_total), test_size=0.2, random_state=42)`; `val_idx, test_idx = train_test_split(tmp, test_size=0.5, random_state=42)`.
 - Eval subset size from env: `N_EVAL = int(os.environ.get('SYNTH_VAL_N_EVAL', 2000))`, capped at `len(test_idx)`, first N of `test_idx`.
 - Classical method targets k_min/k_max only; sigma is CNN-only.
-- Run all commands in the project venv. Use `uv run <cmd>` per the user's environment (uv-managed). If `.venv` exists from `scripts/local_run/setup.sh`, `uv run` uses it.
+- **Interpreter:** use the py311 ML venv `.venv_py311/Scripts/python.exe` (torch 2.6.0+cu124, CUDA available, h5py, scipy, sklearn, torchvision, nbformat, nbconvert, ipykernel all present). Do NOT use `uv run` — the project's default uv env lacks torch.
+  - Python: `.venv_py311/Scripts/python.exe -c "..."`
+  - Notebook execution: `.venv_py311/Scripts/python.exe -m jupyter nbconvert --to notebook --execute --inplace <nb>` (the notebook's `python3` kernelspec resolves to this venv).
+  - Set `SYNTH_VAL_N_EVAL` in PowerShell as `$env:SYNTH_VAL_N_EVAL='64'; <cmd>` (Bash-style `VAR=x cmd` does not work in PowerShell). The Bash tool is also available if preferred.
 
 ---
 
