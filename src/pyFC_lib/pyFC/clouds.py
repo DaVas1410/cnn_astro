@@ -1230,12 +1230,12 @@ class LogNormalFractalCube(FractalCube):
         if kmax is None: kmax = self.kmax
         if beta is None: beta = self.beta
 
-        # Doesn't work yet
-        # return np.where(np.logical_and(np.greater_equal(np.abs(k), kmin),
-        #                                np.less_equal(np.abs(k), kmax)),
-        #                 np.abs(k) ** (beta - 2.), 0)
-
-        return np.where(np.greater_equal(np.abs(k), kmin), np.abs(k) ** (beta - 2.), 0)
+        # Enforce BOTH the lower (kmin) and upper (kmax) cutoffs so the spectrum
+        # is band-limited. Previously only kmin was applied, making kmax a
+        # phantom label. See docs/bugs/pyfc-kmax-not-enforced.md.
+        return np.where(np.logical_and(np.greater_equal(np.abs(k), kmin),
+                                       np.less_equal(np.abs(k), kmax)),
+                        np.abs(k) ** (beta - 2.), 0)
 
     def gen_cube(self, verbose=True, summary=False, random_seed=False, log_name = None):
         """
