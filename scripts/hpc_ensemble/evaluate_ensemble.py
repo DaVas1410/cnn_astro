@@ -192,7 +192,7 @@ def main():
         json.dump(results, f)
 
     # Write human-readable summary
-    with open(base_dir / 'results_summary.txt', 'w') as f:
+    with open(base_dir / 'results_summary.txt', 'w', encoding='utf-8') as f:
         f.write(f"Ensemble ({n_members} members) — test set\n")
         f.write(f"{'='*50}\n")
         f.write(f"{'PARAM':<8} {'MAE':>8} {'RMSE':>8} {'R²':>8} {'σ_total':>10}\n")

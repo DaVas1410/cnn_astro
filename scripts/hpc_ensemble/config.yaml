@@ -8,7 +8,7 @@ hpc:
   mem_gb: 32                     # CHANGE: RAM per job in GB
   time_limit: "06:00:00"         # CHANGE: wall-clock limit per member (HH:MM:SS)
   conda_env: "py311"             # CHANGE: conda environment name on HPC
-  project_dir: "/path/to/cnn_astro"  # CHANGE: absolute path to project root on HPC
+  project_dir: "/path/to/cnn_astro"  # CHANGE: absolute path to project root on HPC (read-only OK; used to read code + data)
 
 # ── TRAINING ────────────────────────────────────────────────────────
 training:
@@ -44,4 +44,7 @@ data:
 
 # ── OUTPUT ──────────────────────────────────────────────────────────
 output:
-  dir: "outputs/hpc_ensemble"
+  # If the repo root is read-only on your HPC, set an ABSOLUTE path you own
+  # (e.g. "/home/<your_user>/cnn_ensemble_out" or "/scratch/<your_user>/...").
+  # A relative path is resolved under hpc.project_dir (read-only -> would fail).
+  dir: "/home/CHANGE_ME/cnn_ensemble_out"   # CHANGE: absolute, writable by you

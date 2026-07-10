@@ -26,7 +26,10 @@ echo "Start: $(date)"
 echo "=================================================="
 
 cd "$PROJECT_DIR"
-mkdir -p logs
+# logs/ only holds SLURM stdout/stderr and is created in the *submit* directory
+# at submission time. The repo root may be read-only on a shared HPC install,
+# so don't let a failed mkdir here kill the job.
+mkdir -p logs 2>/dev/null || true
 
 # Load conda — adapt module name to your HPC
 module load miniconda3 2>/dev/null || module load anaconda3 2>/dev/null || true

@@ -61,3 +61,7 @@ slurm-*.out
 # graphify knowledge-graph index (generated, large, regenerable via `graphify update .`)
 graphify-out/
 .superpowers/sdd/
+
+# Local tooling config (machine-specific absolute paths) and archives
+.claude/
+*.7z
