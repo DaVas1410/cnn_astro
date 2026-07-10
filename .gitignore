@@ -57,3 +57,7 @@ Thumbs.db
 *.out
 *.err
 slurm-*.out
+
+# graphify knowledge-graph index (generated, large, regenerable via `graphify update .`)
+graphify-out/
+.superpowers/sdd/

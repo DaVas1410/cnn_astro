@@ -1,0 +1,17 @@
+# graphify: exclude non-source directories from the knowledge graph.
+# Virtual environments (named .venv_py311/.venv_py39 — not auto-skipped by graphify).
+.venv_py311/
+.venv_py39/
+
+# Data, artifacts, and generated outputs (no first-party source code).
+data/
+outputs/
+observational_images/
+logs/
+experiments/
+
+# Tooling / caches.
+graphify-out/
+.pytest_cache/
+.superpowers/
+.claude/

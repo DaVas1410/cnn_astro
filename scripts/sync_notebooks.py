@@ -1,12 +1,15 @@
 """Convert active notebooks to mirrored .py scripts and refresh the graphify graph.
 
-Run with:  uv run --with nbconvert scripts/sync_notebooks.py
+Run with:  uv run --with nbconvert --with ipython scripts/sync_notebooks.py
+
+The `--with ipython` supplies the transform that turns notebook magics (``%``)
+and shell escapes (``!``) into valid Python (``get_ipython().system(...)``) so the
+generated scripts parse cleanly for the graphify AST indexer.
 """
 from __future__ import annotations
 
 import argparse
 import subprocess
-import sys
 from pathlib import Path
 
 # Relative specs defining the "active" notebook set. Dir specs end with "/".
