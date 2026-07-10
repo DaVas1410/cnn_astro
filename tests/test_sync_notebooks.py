@@ -28,3 +28,16 @@ def test_discover_finds_active_and_skips_checkpoints(tmp_path):
     assert "notebooks/flexible_dataset_generation.ipynb" in rel
     assert not any("archive" in r for r in rel)
     assert not any("checkpoint" in r for r in rel)
+
+
+def test_convert_writes_mirrored_script_with_header(tmp_path):
+    nb = tmp_path / "notebooks" / "comparison" / "demo.ipynb"
+    _write_nb(nb, "def add(a, b):\n    return a + b\n")
+    out_root = tmp_path / "notebooks" / "_scripts"
+
+    written = sn.convert_notebook(nb, tmp_path, out_root)
+
+    assert written == out_root / "comparison" / "demo.py"
+    text = written.read_text(encoding="utf-8")
+    assert text.startswith("# AUTO-GENERATED from notebooks/comparison/demo.ipynb")
+    assert "def add(a, b):" in text

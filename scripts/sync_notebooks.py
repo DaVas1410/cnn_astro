@@ -34,3 +34,19 @@ def discover_notebooks(repo_root: Path) -> list[Path]:
             if nb.is_file():
                 found.add(nb)
     return sorted(p for p in found if ".ipynb_checkpoints" not in p.parts)
+
+
+def convert_notebook(nb_path: Path, repo_root: Path, out_root: Path) -> Path:
+    from nbconvert import PythonExporter  # local import: only needed under `uv run --with nbconvert`
+
+    rel_to_notebooks = nb_path.relative_to(repo_root / "notebooks")
+    out_path = out_root / rel_to_notebooks.with_suffix(".py")
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    exporter = PythonExporter()
+    body, _ = exporter.from_filename(str(nb_path))
+
+    rel_nb = nb_path.relative_to(repo_root).as_posix()
+    header = f"# AUTO-GENERATED from {rel_nb} — do not edit by hand\n"
+    out_path.write_text(header + body, encoding="utf-8")
+    return out_path
