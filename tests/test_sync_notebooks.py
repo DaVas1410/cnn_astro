@@ -41,3 +41,19 @@ def test_convert_writes_mirrored_script_with_header(tmp_path):
     text = written.read_text(encoding="utf-8")
     assert text.startswith("# AUTO-GENERATED from notebooks/comparison/demo.ipynb")
     assert "def add(a, b):" in text
+
+
+def test_run_skips_bad_notebook_and_reports(tmp_path):
+    good = tmp_path / "notebooks" / "comparison" / "good.ipynb"
+    _write_nb(good, "y = 2\n")
+    bad = tmp_path / "notebooks" / "sigma_research.ipynb"
+    bad.parent.mkdir(parents=True, exist_ok=True)
+    bad.write_text("{ this is not valid notebook json", encoding="utf-8")
+
+    out_root = tmp_path / "notebooks" / "_scripts"
+    converted, skipped = sn.run(tmp_path, out_root, run_graph=False)
+
+    conv_rel = [p.relative_to(tmp_path).as_posix() for p in converted]
+    skip_rel = [p.relative_to(tmp_path).as_posix() for p, _ in skipped]
+    assert "notebooks/_scripts/comparison/good.py" in conv_rel
+    assert "notebooks/sigma_research.ipynb" in skip_rel
