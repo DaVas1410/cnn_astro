@@ -3,6 +3,10 @@
 .venv_py311/
 .venv_py39/
 
+# Retired / archived code — keep it out of the graph (matches design intent).
+scripts/archive/
+notebooks/archive/
+
 # Data, artifacts, and generated outputs (no first-party source code).
 data/
 outputs/

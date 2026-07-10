@@ -66,7 +66,14 @@ def run(
         except Exception as exc:  # noqa: BLE001 — one bad notebook must not abort the batch
             skipped.append((nb, str(exc)))
     if run_graph:
-        subprocess.run(["graphify", "update", "."], cwd=str(repo_root), check=False)
+        try:
+            result = subprocess.run(["graphify", "update", "."], cwd=str(repo_root), check=False)
+            if result.returncode != 0:
+                print(f"warning: `graphify update .` exited {result.returncode}; graph may be stale")
+        except FileNotFoundError:
+            # Missing graphify must not lose the conversion summary printed by the caller.
+            print("warning: `graphify` not found on PATH; skipped graph update "
+                  "(run `graphify update .` manually)")
     return converted, skipped
 
 
@@ -75,6 +82,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--no-graph", action="store_true", help="skip the `graphify update .` step")
     args = parser.parse_args(argv)
 
+    try:
+        import nbconvert  # noqa: F401 — availability probe for one clear error, not per-notebook skips
+    except ImportError:
+        print("error: nbconvert not available — run via "
+              "`uv run --with nbconvert --with ipython scripts/sync_notebooks.py`")
+        return 2
+
     repo_root = Path(__file__).resolve().parent.parent
     out_root = repo_root / "notebooks" / "_scripts"
     converted, skipped = run(repo_root, out_root, run_graph=not args.no_graph)
@@ -82,7 +96,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"converted {len(converted)} / skipped {len(skipped)}")
     for nb, err in skipped:
         print(f"  SKIPPED {nb.relative_to(repo_root).as_posix()}: {err}")
-    return 0
+    return 1 if skipped else 0
 
 
 if __name__ == "__main__":

@@ -57,3 +57,19 @@ def test_run_skips_bad_notebook_and_reports(tmp_path):
     skip_rel = [p.relative_to(tmp_path).as_posix() for p, _ in skipped]
     assert "notebooks/_scripts/comparison/good.py" in conv_rel
     assert "notebooks/sigma_research.ipynb" in skip_rel
+
+
+def test_run_survives_missing_graphify(tmp_path, monkeypatch, capsys):
+    _write_nb(tmp_path / "notebooks" / "comparison" / "ok.ipynb", "z = 3\n")
+
+    def _raise_missing(*args, **kwargs):
+        raise FileNotFoundError("graphify")
+
+    monkeypatch.setattr(sn.subprocess, "run", _raise_missing)
+    out_root = tmp_path / "notebooks" / "_scripts"
+
+    # graphify absent must NOT crash the run — conversions and summary survive.
+    converted, skipped = sn.run(tmp_path, out_root, run_graph=True)
+
+    assert len(converted) == 1 and skipped == []
+    assert "graphify` not found" in capsys.readouterr().out
