@@ -1,0 +1,11 @@
+extends: config_base.yaml
+experiment:
+  name: multitask
+task:
+  mode: multitask
+  targets: [k_min, k_max, sigma, beta]
+  target_ranges:
+    k_min: [1.0, 32.0]
+    k_max: [34.0, 64.0]
+    sigma: [0.0, 5.0]
+    beta: [-3.0, -1.0]

@@ -1,0 +1,26 @@
+extends: config_base.yaml
+experiment:
+  name: single_sigma
+task:
+  mode: single_target
+  targets: [sigma]
+  target_ranges:
+    sigma: [0.0, 5.0]
+search:
+  selection:
+    target: sigma
+candidate_training:
+  selection:
+    target: sigma
+interpretability:
+  enabled: false
+stages:
+  enabled:
+    - validate_data
+    - grid_search
+    - select_candidates
+    - retrain_candidates
+    - select_final
+    - train_ensemble
+    - evaluate_ensemble
+    - report

@@ -1,0 +1,277 @@
+schema_version: 1
+
+experiment:
+  # This repository assumes it lives at <project>/code/<repository>/.
+  # Paths below are resolved from this YAML file and contain no user-specific locations.
+  project_root: ../../..
+  output_root: turbulens/training/outputs
+  version: local_v2
+  allow_config_change: false
+
+data:
+  small_root: data/data_small
+  large_root: data/data_large
+  split_directories:
+    train: train
+    validation: val
+    test: test
+  require_square_for_augmentation: true
+  enforce_disjoint_files: true
+  normalization:
+    # Robust intensity normalization estimated from TRAINING images only.
+    lower_percentile: 0.5
+    upper_percentile: 99.5
+    max_images: 10000
+    max_pixels: 10000000
+    epsilon: 1.0e-8
+    seed: 424242
+
+model:
+  architectures: [resnet18, resnet34, resnet50]
+  in_channels: [1, 3]
+
+  # local_v1 showed a strong advantage of ImageNet initialization and all
+  # large-data candidates selected from the first grid were pretrained.
+  pretrained: [true]
+
+  # Pin the exact torchvision ImageNet weight recipe used for each backbone.
+  # This avoids relying on a version-dependent `Weights.DEFAULT` alias.
+  pretrained_weights:
+    resnet18: IMAGENET1K_V1
+    resnet34: IMAGENET1K_V1
+    resnet50: IMAGENET1K_V2
+
+  preserve_resolution: true
+  input_standardization: imagenet
+  shared_dimensions: [512, 256]
+  head_hidden_dimension: 96
+
+  # Explicitly expose the dropout policy used by the model so there is no hidden
+  # relationship between the searched base dropout and layer-specific dropout.
+  # For base dropout d:
+  #   shared layer i: min(shared_max, d + i * shared_increment_per_layer)
+  #   target head:    min(head_max, d * head_multiplier)
+  dropout_policy:
+    shared_increment_per_layer: 0.10
+    shared_max: 0.60
+    head_multiplier: 0.50
+    head_max: 0.35
+
+search:
+  # The small-data grid is a screening stage. One seed is used here; robustness
+  # is increased during large-data candidate retraining and final ensembling.
+  repetitions_per_configuration: 1
+  seeds: [42]
+  space:
+    dropout: [0.2, 0.3, 0.4]
+
+    # Refined around the local_v1 optimum (1e-3), which was the best tested
+    # boundary. A factor-of-two neighborhood brackets that optimum.
+    learning_rate: [5.0e-4, 1.0e-3, 2.0e-3]
+
+    # 64 and 128 were clearly preferable within the strong pretrained/lr=1e-3
+    # regime and both were already demonstrated feasible in local_v1.
+    batch_size: [64, 128]
+
+    # Secondary dimensions remain fixed in this refinement. They should be
+    # revisited only after the dominant LR/batch-size region is localized.
+    weight_decay: [1.0e-4]
+    loss: [smooth_l1]
+    smooth_l1_beta: [0.05]
+
+  selection:
+    # Kept unchanged from local_v1 for direct comparability. Lower is better:
+    # minmax(macro normalized MSE) + minmax(1 - macro normalized R2).
+    metric: mse_r2
+    target: overall
+    space: normalized
+    mse_weight: 1.0
+    r2_weight: 1.0
+    scaling: minmax
+
+    # Weak small->large rank transfer in local_v1 argues against aggressive
+    # pruning. Retain 8 configurations per architecture (24 total).
+    group_by: architecture
+    top_per_group: 8
+    # Reporting table size only; grouped selection is controlled by top_per_group.
+    top_k: 24
+    require_all: true
+
+candidate_training:
+  # Two large-data repetitions reduce sensitivity to a single favorable seed.
+  repetitions_per_configuration: 2
+  seeds: [31415, 27182]
+  selection:
+    metric: mse_r2
+    target: overall
+    space: normalized
+    mse_weight: 1.0
+    r2_weight: 1.0
+    scaling: minmax
+    group_by: null
+    # With group_by=null this is the number of final configurations selected.
+    top_per_group: 1
+    # Reporting table size only.
+    top_k: 24
+    require_all: true
+
+ensemble:
+  members: 5
+  seeds: [42, 123, 456, 789, 2026]
+  normalization_seed: 424242
+  interval_levels: [0.68, 0.90, 0.95]
+  bootstrap_repetitions: 2000
+
+training:
+  epochs: 200
+  gradient_clip_norm: 1.0
+
+  # Explicit AdamW settings. These are fixed methodology parameters, not grid
+  # factors in local_v2. Values equal PyTorch's standard defaults used previously.
+  optimizer:
+    name: adamw
+    betas: [0.9, 0.999]
+    eps: 1.0e-8
+    amsgrad: false
+
+  scheduler:
+    name: reduce_on_plateau
+    factor: 0.5
+    patience: 5
+    min_lr: 1.0e-7
+    threshold: 1.0e-4
+    threshold_mode: rel
+    cooldown: 0
+    eps: 1.0e-8
+
+  early_stopping:
+    monitor: validation_loss
+    mode: min
+    patience: 20
+    min_delta: 0.0
+
+  augmentation: true
+  amp: true
+  deterministic: false
+  cudnn_benchmark: true
+  num_workers: 18
+  prefetch_factor: 2
+  pin_memory: true
+  persistent_workers: true
+
+evaluation:
+  # Validation is available during search/candidate stages; test is intentionally
+  # disabled until the final ensemble has been selected.
+  grid:
+    evaluate_validation: true
+    evaluate_test: false
+  candidate:
+    evaluate_validation: true
+    evaluate_test: false
+  final:
+    evaluate_validation: true
+    evaluate_test: true
+
+runtime:
+  gpus: [0, 1]
+  max_parallel_jobs: 2
+  device: cuda
+  poll_seconds: 5
+  fail_fast_grid: false
+  fail_fast_other_stages: true
+  # Use the exact interpreter that launched pipeline.py for all training children.
+  python_executable: current
+
+  # Availability guard for shared workstations. It waits; it never changes the
+  # configured training batch size or other scientific hyperparameters.
+  gpu_wait:
+    enabled: true
+    poll_seconds: 30
+    stable_seconds: 60
+    report_every_seconds: 60
+    timeout_seconds: 0
+    nvidia_smi: nvidia-smi
+
+  environment:
+    PYTHONNOUSERSITE: "1"
+    PYTHONUNBUFFERED: "1"
+    INTERPRET_LINALG_THREADS: "4"
+
+checkpointing:
+  resume: true
+  every_n_epochs: 1
+  verify_after_write: true
+
+storage:
+  grid:
+    save_predictions: false
+    save_plots: false
+    save_environment: false
+    keep_best_checkpoint: false
+    keep_latest_checkpoint: false
+  candidate:
+    save_predictions: false
+    save_plots: false
+    save_environment: false
+    keep_best_checkpoint: false
+    keep_latest_checkpoint: false
+  final:
+    save_predictions: true
+    save_plots: true
+    save_environment: true
+    keep_best_checkpoint: true
+    keep_latest_checkpoint: false
+  write_per_image_csv: true
+
+interpretability:
+  enabled: true
+  embedding_layers: [shared]
+  batch_size: 256
+  fit_split: validation
+  plot_split: test
+  pca_components: 20
+  pca_fit_max_samples: 10000
+  pca_backend: incremental
+  pca_device: cpu
+  pca_oversamples: 10
+  pca_power_iterations: 3
+  pca_cpu_batch_size: 4096
+  pca_transform_batch_size: 10000
+  linear_algebra_threads: 4
+  pc_correlation_components: 10
+  cca_components: 4
+  cca_fit_max_samples: 5000
+  cca_max_iter: 1000
+  cca_tol: 1.0e-5
+  cca_pca_components: 50
+  cca_pca_variance: 0.95
+  umap:
+    policy: optional
+    neighbors: 30
+    min_dist: 0.1
+    fit_max_samples: 5000
+    transform_batch_size: 10000
+    representations: consensus
+  max_analysis_samples: 50000
+  max_plot_points: 30000
+  save_embeddings: true
+
+stages:
+  # Keep the complete scientific workflow in the canonical config. For the
+  # refinement checkpoint, use CLI --to-stage select_final; this avoids changing
+  # the resolved config hash and lets the same run resume later at train_ensemble.
+  enabled:
+    - validate_data
+    - grid_search
+    - select_candidates
+    - retrain_candidates
+    - select_final
+    - train_ensemble
+    - evaluate_ensemble
+    - interpretability
+    - report
+  skip_valid_completed: true
+
+logging:
+  level: INFO
+  retain_individual_run_logs: true

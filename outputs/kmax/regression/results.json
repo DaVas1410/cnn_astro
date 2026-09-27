@@ -1,0 +1,15 @@
+{
+  "model": "ResNet50_regression",
+  "dataset": "randomboth_balancedkmax_kmin1-16_kmax2-64_128x128_32000.h5",
+  "metrics": {
+    "mae": 6.590297698974609,
+    "rmse": 9.436408579791658,
+    "r2": 0.7148171663284302
+  },
+  "hyperparameters": {
+    "batch_size": 32,
+    "learning_rate": 0.0001,
+    "epochs_trained": 65
+  },
+  "training_time_minutes": 87.59116850296657
+}
