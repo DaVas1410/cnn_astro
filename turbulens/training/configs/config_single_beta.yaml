@@ -1,0 +1,26 @@
+extends: config_base.yaml
+experiment:
+  name: single_beta
+task:
+  mode: single_target
+  targets: [beta]
+  target_ranges:
+    beta: [-3.0, -1.0]
+search:
+  selection:
+    target: beta
+candidate_training:
+  selection:
+    target: beta
+interpretability:
+  enabled: false
+stages:
+  enabled:
+    - validate_data
+    - grid_search
+    - select_candidates
+    - retrain_candidates
+    - select_final
+    - train_ensemble
+    - evaluate_ensemble
+    - report

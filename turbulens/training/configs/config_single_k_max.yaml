@@ -1,0 +1,26 @@
+extends: config_base.yaml
+experiment:
+  name: single_k_max
+task:
+  mode: single_target
+  targets: [k_max]
+  target_ranges:
+    k_max: [34.0, 64.0]
+search:
+  selection:
+    target: k_max
+candidate_training:
+  selection:
+    target: k_max
+interpretability:
+  enabled: false
+stages:
+  enabled:
+    - validate_data
+    - grid_search
+    - select_candidates
+    - retrain_candidates
+    - select_final
+    - train_ensemble
+    - evaluate_ensemble
+    - report

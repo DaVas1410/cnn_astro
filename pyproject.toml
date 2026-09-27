@@ -1,0 +1,59 @@
+[build-system]
+requires = ["setuptools>=68", "setuptools_scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "turbulens"
+dynamic = ["version"]
+description = "Inference tool for predicting fractal turbulence parameters from radio-astronomy FITS cubes"
+readme = "turbulens/README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Juan Daniel Vasconez Vela", email = "juan.vasconezvela@gmail.com" },
+    { name = "Wladimir E. Banda-Barragan" },
+    { name = "Hernan Andres Morales Navarrete" },
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Astronomy",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+dependencies = [
+    "numpy>=1.24",
+    "astropy>=6.0",
+    "scipy>=1.10",
+    "torch>=2.1",
+    "torchvision>=0.16",
+]
+
+[project.urls]
+Homepage = "https://github.com/wbandabarragan/cnn-turbulence"
+Documentation = "https://github.com/wbandabarragan/cnn-turbulence/tree/main/docs/turbulens"
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+image = ["pillow>=10"]
+training = ["h5py>=3.8", "matplotlib>=3.7", "PyYAML>=6.0", "scikit-learn>=1.3", "tqdm>=4.65", "threadpoolctl>=3.1"]
+docs = ["sphinx>=7.2", "numpydoc>=1.6", "sphinx-argparse>=0.4", "pydata-sphinx-theme>=0.15"]
+notebooks = ["pandas>=2.3.3", "plotly>=7.0.0", "nbformat>=5.11.1"]
+
+[project.scripts]
+turbulens = "turbulens.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["turbulens*"]
+exclude = ["turbulens.training*"]
+
+[tool.setuptools_scm]
+fallback_version = "0.1.0"
+
+[tool.pytest.ini_options]
+testpaths = ["turbulens"]
+# turbulens/training/*.py imports its own siblings with flat names (e.g. `from pipeline_lib.config
+# import ...`), matching how it's invoked as a script directory (`cd turbulens/training && python
+# pipeline.py`); this makes those same flat imports resolve for turbulens/training/tests/ under pytest.
+pythonpath = ["turbulens/training"]

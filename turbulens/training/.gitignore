@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+*.log
+*.pid
+.pipeline.lock
+.DS_Store
+nohup_*.log
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+results/
+outputs/

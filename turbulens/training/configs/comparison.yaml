@@ -1,0 +1,11 @@
+# Final comparison after the multitask and four single-target local_v2 pipelines.
+multitask_root: ../outputs/multitask/local_v2
+single_target_roots:
+  k_min: ../outputs/single_k_min/local_v2
+  k_max: ../outputs/single_k_max/local_v2
+  sigma: ../outputs/single_sigma/local_v2
+  beta: ../outputs/single_beta/local_v2
+output_dir: ../outputs/comparison/local_v2
+bootstrap_repetitions: 5000
+permutation_repetitions: 10000
+seed: 2026

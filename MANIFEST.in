@@ -1,0 +1,8 @@
+# setuptools_scm defaults to including every git-tracked file; turbulens/training/ is a
+# script-driven pipeline run in-place from a source checkout (see its own README), not an
+# installed subpackage, and its tools/ contains machine-specific paths not meant for
+# redistribution -- prune it from the built sdist/wheel explicitly.
+prune turbulens/training
+# Real-data test fixture (~24MB) -- needed for the test suite from a git checkout,
+# not for the installed package.
+prune turbulens/io/tests/data

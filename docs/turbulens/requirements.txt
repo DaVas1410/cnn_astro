@@ -1,0 +1,4 @@
+sphinx>=7.2
+numpydoc>=1.6
+sphinx-argparse>=0.4
+pydata-sphinx-theme>=0.15

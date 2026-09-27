@@ -1,0 +1,113 @@
+# Docs and thesis writing (author's own material, stays local, never committed/pushed)
+# turbulens/ is the package's own Sphinx docs and stays public/tracked.
+/docs/*
+!/docs/turbulens/
+/paper/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.so
+
+# Sphinx documentation build output
+docs/turbulens/_build/
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Data files (large binaries)
+data/raw/*.h5
+data/raw/perf/
+
+# Model checkpoints
+*.pt
+*.pth
+*.ckpt
+*.h5
+*.keras
+
+# NumPy arrays
+*.npy
+*.npz
+
+# Figures / outputs (keep directory structure)
+outputs/**/*.png
+outputs/**/*.pdf
+outputs/**/*.svg
+outputs/output_data_*.npy
+
+# Local ensemble training runs (large, regenerable via turbulens/training)
+/astro-tool/multitask/
+/outputs/multitask/
+/outputs/single_beta/
+/outputs/single_k_max/
+/outputs/single_k_min/
+/outputs/single_sigma/
+/outputs/comparison/
+/outputs/logs/
+/outputs/results_16_9/
+/outputs/_stale_pruned_*/
+
+# Already-archived legacy material (kept on disk, not tracked)
+/experiments/archive/
+/outputs/archive/
+/logs/balanced_gen.log
+/logs/balanced_generation.log
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# SLURM logs
+*.out
+*.err
+slurm-*.out
+
+# AI coding assistant tooling, instructions, and generated state -- local-only, never committed
+.claude/
+.claude-plugin/
+.cursor/
+.cursorrules
+.continue/
+.aider*
+.windsurf/
+.windsurfrules
+.clinerules/
+.github/copilot-instructions.md
+CLAUDE.md
+AGENTS.md
+GEMINI.md
+.graphifyignore
+graphify-out/
+.superpowers/
+docs/superpowers/
+
+# Archive staging: superseded material kept on disk for reference, not tracked in git
+# (full history for anything that was tracked before this move is in earlier commits)
+/archive/
+
+# Local tooling config (machine-specific absolute paths)
+*.7z
+.venv-gen/
