@@ -1,24 +1,14 @@
 """The CNN regression architecture: a ResNet backbone with per-target heads.
 
 The network predicts several continuous physical targets (e.g. `k_min`,
-`k_max`, `sigma`, `beta` from `archive/src/pyFC_lib`'s log-normal fractal cube
-model) from a single 2D image, sharing one backbone and one shared
-trunk across all targets, then branching into a small independent head
-per target. This joint-multi-head design is what the repository's
-`archive/docs/RESEARCH_JOURNEY.md` (phases 5-6) calls "joint regression".
-
-The `local_v2` multitask-vs-single-target comparison
-(`outputs/comparison/local_v2/comparison_report.md`) found the opposite
-of the earlier working assumption: a dedicated single-target model is a
-statistically significant (paired test, Holm-Bonferroni adjusted) but
-practically small improvement over the shared model on `k_min`,
-`k_max`, and `sigma`, while the shared model remains clearly better on
-`beta`. The single-target system also costs ~5x the total training time
-and ~4x the parameters of one shared multitask model, since it trains
-one full network per target instead of one. Joint regression is kept as
-the default here for that cost/accuracy tradeoff and because it is
-still the best approach for `beta`, not because it dominates on every
-target.
+`k_max`, `sigma`, `beta` of pyFC's log-normal fractal field model) from
+a single 2D image, sharing one backbone and one shared trunk across all
+targets, then branching into a small independent head per target
+("joint regression", or hard parameter sharing). A single-target model
+is the same network with one head. The training pipeline trains both
+kinds and compares them on matched test images; see the Method and
+Training Pipeline sections of the documentation for the design and the
+comparison procedure.
 """
 
 from __future__ import annotations
@@ -240,7 +230,7 @@ class ResNetPhysicalRegressor(nn.Module):
         -----
         Exposed as a separate method (rather than only reachable via
         `forward`) so that interpretability analyses (PCA/CCA/UMAP over
-        embeddings, per `archive/docs/RESEARCH_JOURNEY.md` phase 12) can extract
+        embeddings, run by the training pipeline) can extract
         either representation without running the per-target heads.
         """
         if x.ndim != 4 or x.shape[1] != self.in_channels:

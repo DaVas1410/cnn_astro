@@ -6,7 +6,7 @@ A configuration-driven, resumable PyTorch workflow for regression of physical pa
 **Canonical experiment:** `local_v2`
 **Execution model:** local Linux GPU server/workstation, no Slurm dependency
 
-The current search design was refined from the completed `local_v1` experiment using post-hoc marginal effects, pairwise interaction analysis, conditional-regime analysis, and small-data to large-data rank transfer. The rationale is documented in [`docs/GRID_REFINEMENT_RATIONALE.md`](docs/GRID_REFINEMENT_RATIONALE.md).
+The current search design was refined from the completed `local_v1` experiment using post-hoc marginal effects, pairwise interaction analysis, conditional-regime analysis, and small-data to large-data rank transfer. The rationale is documented in the Sphinx page `docs/turbulens/training_pipeline/hyperparameter_search.rst`.
 
 ## Scientific workflow
 
@@ -111,7 +111,7 @@ Training batch size is a true search parameter. There is no automatic batch-size
 - **Uncertainty language is conservative.** Across-member SD is descriptive ensemble spread, not automatically a calibrated prediction/confidence interval. Metric bootstrap intervals are reported separately.
 - **Paired final comparison.** The multitask-versus-single-target comparison checks matching samples/ground truth, reports paired bootstrap differences and sign-flip randomization tests, and applies Holm-Bonferroni adjustment across the four target-wise tests.
 
-See [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) for the full methods-level description and [`docs/SCIENTIFIC_BEHAVIOR.md`](docs/SCIENTIFIC_BEHAVIOR.md) for reproducibility invariants.
+See the Sphinx documentation (`docs/turbulens/method/` and `docs/turbulens/training_pipeline/`) for the full methods-level description and the reproducibility invariants.
 
 ## Data format
 
@@ -284,7 +284,7 @@ ensemble/final_configuration.json, ensemble/evaluation/
 report/, hyperparameter_analysis/
 ```
 
-Grid and candidate runs use compact storage profiles. Final ensemble members retain checkpoints, predictions, plots, histories, and environment information required for final evaluation and reproducibility. See [`docs/OUTPUT_LAYOUT.md`](docs/OUTPUT_LAYOUT.md).
+Grid and candidate runs use compact storage profiles. Final ensemble members retain checkpoints, predictions, plots, histories, and environment information required for final evaluation and reproducibility. See `docs/turbulens/training_pipeline/outputs.rst`.
 
 ## Interpretability
 
@@ -300,14 +300,9 @@ The release validation report is [`VALIDATION_REPORT.md`](VALIDATION_REPORT.md).
 
 ## Documentation
 
-- [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md): manuscript-oriented scientific methodology
-- [`docs/RUNBOOK.md`](docs/RUNBOOK.md): exact operational workflow and commands
-- [`docs/GRID_REFINEMENT_RATIONALE.md`](docs/GRID_REFINEMENT_RATIONALE.md): evidence supporting the `local_v2` search
-- [`docs/HYPERPARAMETER_ANALYSIS.md`](docs/HYPERPARAMETER_ANALYSIS.md): post-hoc analysis outputs and interpretation
-- [`docs/CONFIGURATION_REFERENCE.md`](docs/CONFIGURATION_REFERENCE.md): configuration field reference
-- [`docs/SCIENTIFIC_BEHAVIOR.md`](docs/SCIENTIFIC_BEHAVIOR.md): scientific/reproducibility invariants
-- [`docs/OUTPUT_LAYOUT.md`](docs/OUTPUT_LAYOUT.md): result-tree and retention policy
-- [`docs/REPRODUCIBILITY_CHECKLIST.md`](docs/REPRODUCIBILITY_CHECKLIST.md): pre-publication QC checklist
+- `docs/turbulens/training_pipeline/` (Sphinx, build with `make html` in `docs/turbulens/`): overview, configuration,
+  hyperparameter search and its rationale, scientific invariants and release checklist, runbook, output layout
+- `docs/turbulens/method/`: methods-level description (data, preprocessing, architecture, training, uncertainty, metrics)
 - [`docs/CONFIGURABILITY_AUDIT.md`](docs/CONFIGURABILITY_AUDIT.md): audit of hidden/default behavior
 - [`docs/MIGRATION_FROM_SLURM.md`](docs/MIGRATION_FROM_SLURM.md): differences from the earlier scheduler-based workflow
 - [`configs/README.md`](configs/README.md): canonical and task-specific configurations

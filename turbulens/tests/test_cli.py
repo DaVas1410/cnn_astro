@@ -8,6 +8,7 @@ from astropy.table import QTable
 
 from turbulens.cli import main
 from turbulens.models.architecture import build_model_from_config
+from turbulens.models.registry import DEFAULT_HUB_REPO, EnsembleRegistry, FetchedEnsemble
 
 
 def _write_fits_cube(path):
@@ -287,21 +288,112 @@ def test_infer_command_rejects_malformed_integrate(tmp_path, capsys):
     assert "usage:" in captured.err
 
 
-def test_infer_command_rejects_missing_output_root_with_usage_message(tmp_path, capsys):
+def _fake_fetch(tmp_path, calls):
+    """Stand-in for `EnsembleRegistry.fetch` that serves a tiny local two-member ensemble."""
+    def fake(target=None, version="latest", repo_id=DEFAULT_HUB_REPO, revision=None):
+        calls.append({"target": target, "version": version, "repo_id": repo_id, "revision": revision})
+        members_dir = tmp_path / "hub" / (target or "multitask") / "members"
+        if not members_dir.exists():
+            _write_member(members_dir / "member_0")
+            _write_member(members_dir / "member_1")
+        return FetchedEnsemble(members_dir=members_dir, repo_id=repo_id, revision="0123abcd")
+    return fake
+
+
+def test_infer_command_model_auto_without_output_root_fetches_from_hub(tmp_path, monkeypatch):
+    fits_path = tmp_path / "cube.fits"
+    _write_fits_cube(fits_path)
+    calls = []
+    monkeypatch.setattr(EnsembleRegistry, "fetch", staticmethod(_fake_fetch(tmp_path, calls)))
+    out_path = tmp_path / "predictions.ecsv"
+
+    main([
+        "infer",
+        "--input", str(fits_path),
+        "--channel", "0",
+        "--model", "auto",
+        "--target", "k_min",
+        "--revision", "v1.0",
+        "--out", str(out_path),
+    ])
+
+    assert calls == [{"target": "k_min", "version": "latest", "repo_id": DEFAULT_HUB_REPO, "revision": "v1.0"}]
+    table = QTable.read(out_path)
+    assert table.meta["model_repo"] == DEFAULT_HUB_REPO
+    assert table.meta["model_revision"] == "0123abcd"
+
+
+def test_infer_command_model_auto_with_output_root_does_not_touch_hub(tmp_path, monkeypatch):
+    fits_path = tmp_path / "cube.fits"
+    _write_fits_cube(fits_path)
+    output_root = tmp_path / "pipeline_output"
+    _write_member(output_root / "multitask" / "v1" / "ensemble" / "members" / "member_0")
+    _write_member(output_root / "multitask" / "v1" / "ensemble" / "members" / "member_1")
+    calls = []
+    monkeypatch.setattr(EnsembleRegistry, "fetch", staticmethod(_fake_fetch(tmp_path, calls)))
+    out_path = tmp_path / "predictions.ecsv"
+
+    main([
+        "infer", "--input", str(fits_path), "--channel", "0",
+        "--model", "auto", "--output-root", str(output_root), "--out", str(out_path),
+    ])
+
+    assert calls == []
+    assert "model_repo" not in QTable.read(out_path).meta
+
+
+def test_infer_command_rejects_revision_without_hub_download(tmp_path, capsys):
     fits_path = tmp_path / "cube.fits"
     _write_fits_cube(fits_path)
 
     with pytest.raises(SystemExit):
         main([
-            "infer",
-            "--input", str(fits_path),
-            "--channel", "0",
-            "--model", "auto",
+            "infer", "--input", str(fits_path), "--channel", "0",
+            "--model", "auto", "--output-root", str(tmp_path), "--revision", "v1.0",
         ])
+
+    assert "--revision" in capsys.readouterr().err
+
+
+def test_infer_command_reports_hub_failure_with_usage_message(tmp_path, monkeypatch, capsys):
+    fits_path = tmp_path / "cube.fits"
+    _write_fits_cube(fits_path)
+
+    def offline(**kwargs):
+        raise FileNotFoundError("offline and not cached; run 'turbulens download' while online")
+    monkeypatch.setattr(EnsembleRegistry, "fetch", staticmethod(offline))
+
+    with pytest.raises(SystemExit):
+        main(["infer", "--input", str(fits_path), "--channel", "0", "--model", "auto"])
 
     captured = capsys.readouterr()
     assert "usage:" in captured.err
-    assert "--output-root" in captured.err
+    assert "turbulens download" in captured.err
+
+
+def test_download_command_fetches_the_multitask_ensemble_by_default(tmp_path, monkeypatch, capsys):
+    calls = []
+    monkeypatch.setattr(EnsembleRegistry, "fetch", staticmethod(_fake_fetch(tmp_path, calls)))
+
+    main(["download"])
+
+    assert [c["target"] for c in calls] == [None]
+    assert str(tmp_path / "hub" / "multitask" / "members") in capsys.readouterr().out
+
+
+def test_download_command_all_fetches_every_ensemble(tmp_path, monkeypatch):
+    calls = []
+    monkeypatch.setattr(EnsembleRegistry, "fetch", staticmethod(_fake_fetch(tmp_path, calls)))
+
+    main(["download", "--all", "--revision", "v1.0"])
+
+    assert [c["target"] for c in calls] == [None, "k_min", "k_max", "sigma", "beta"]
+    assert {c["revision"] for c in calls} == {"v1.0"}
+
+
+def test_download_command_rejects_target_with_all(capsys):
+    with pytest.raises(SystemExit):
+        main(["download", "--all", "--target", "k_min"])
 
 
 def test_inspect_command_prints_breakdown_to_stdout(tmp_path, capsys):

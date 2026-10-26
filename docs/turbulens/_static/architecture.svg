@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 330" font-family="Helvetica, Arial, sans-serif" font-size="13">
+  <title>turbulens network: ResNet backbone, shared trunk, one head per target</title>
+  <rect x="0" y="0" width="760" height="330" rx="10" fill="#ffffff"/>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#4b5563"/>
+    </marker>
+  </defs>
+  <g stroke="#4b5563" stroke-width="1.4" fill="none">
+    <rect x="20" y="120" width="110" height="90" rx="6" fill="#f3f4f6"/>
+    <rect x="160" y="105" width="150" height="120" rx="6" fill="#dbeafe"/>
+    <rect x="340" y="105" width="140" height="120" rx="6" fill="#e0e7ff"/>
+    <rect x="520" y="25" width="120" height="50" rx="6" fill="#fef3c7"/>
+    <rect x="520" y="105" width="120" height="50" rx="6" fill="#fef3c7"/>
+    <rect x="520" y="185" width="120" height="50" rx="6" fill="#fef3c7"/>
+    <rect x="520" y="265" width="120" height="50" rx="6" fill="#fef3c7"/>
+    <line x1="130" y1="165" x2="158" y2="165" marker-end="url(#arrow)"/>
+    <line x1="310" y1="165" x2="338" y2="165" marker-end="url(#arrow)"/>
+    <line x1="480" y1="165" x2="518" y2="50" marker-end="url(#arrow)"/>
+    <line x1="480" y1="165" x2="518" y2="130" marker-end="url(#arrow)"/>
+    <line x1="480" y1="165" x2="518" y2="210" marker-end="url(#arrow)"/>
+    <line x1="480" y1="165" x2="518" y2="290" marker-end="url(#arrow)"/>
+    <line x1="640" y1="50" x2="668" y2="50" marker-end="url(#arrow)"/>
+    <line x1="640" y1="130" x2="668" y2="130" marker-end="url(#arrow)"/>
+    <line x1="640" y1="210" x2="668" y2="210" marker-end="url(#arrow)"/>
+    <line x1="640" y1="290" x2="668" y2="290" marker-end="url(#arrow)"/>
+  </g>
+  <g fill="#111827" text-anchor="middle">
+    <text x="75" y="145" font-weight="bold">Input</text>
+    <text x="75" y="165">normalized</text>
+    <text x="75" y="181">image, ×3</text>
+    <text x="75" y="197">channels</text>
+    <text x="235" y="130" font-weight="bold">ResNet backbone</text>
+    <text x="235" y="152">residual stages</text>
+    <text x="235" y="170">(max-pool removed)</text>
+    <text x="235" y="188">global average</text>
+    <text x="235" y="206">pooling</text>
+    <text x="410" y="130" font-weight="bold">Shared trunk</text>
+    <text x="410" y="152">Linear → 512</text>
+    <text x="410" y="170">LayerNorm, GELU</text>
+    <text x="410" y="188">Linear → 256</text>
+    <text x="410" y="206">LayerNorm, GELU</text>
+    <text x="580" y="47">head: 256 → 96 → 1</text>
+    <text x="580" y="127">head: 256 → 96 → 1</text>
+    <text x="580" y="207">head: 256 → 96 → 1</text>
+    <text x="580" y="287">head: 256 → 96 → 1</text>
+  </g>
+  <g fill="#111827" text-anchor="start" font-style="italic">
+    <text x="674" y="55">k_min</text>
+    <text x="674" y="135">k_max</text>
+    <text x="674" y="215">sigma</text>
+    <text x="674" y="295">beta</text>
+  </g>
+  <text x="580" y="66" fill="#4b5563" text-anchor="middle" font-size="11">GELU, dropout</text>
+  <text x="580" y="146" fill="#4b5563" text-anchor="middle" font-size="11">GELU, dropout</text>
+  <text x="580" y="226" fill="#4b5563" text-anchor="middle" font-size="11">GELU, dropout</text>
+  <text x="580" y="306" fill="#4b5563" text-anchor="middle" font-size="11">GELU, dropout</text>
+</svg>

@@ -3,80 +3,86 @@
 turbulens
 =========
 
-`turbulens` predicts fractal turbulence parameters (`k_min`, `k_max`,
-`sigma`, and `beta` where available) from radio-astronomy FITS cubes
-or plain images, using a pretrained deep-ensemble CNN. See
-:doc:`concepts` for the physical background, :doc:`cli` for
-command-line usage, and :doc:`api/index` for the full API reference.
+`turbulens` estimates the parameters of interstellar turbulence from a
+single 2D map: the range of spatial scales the turbulent structure spans
+(:math:`k_\mathrm{min}`, :math:`k_\mathrm{max}`), the slope of its power
+spectrum (:math:`\beta`) and its density contrast (:math:`\sigma`). It
+uses a deep ensemble of convolutional neural networks trained on
+synthetic log-normal fractal fields, and it reads radio-astronomy FITS
+cubes, such as HI 21-cm surveys, as well as plain images. Classical,
+model-free spectral estimators are included as a cross-check.
 
 Installation
 ------------
 
 .. code-block:: bash
 
-   pip install -e .[image]  # from a checkout of this repository
-
-.. _getting-an-ensemble:
-
-Getting an ensemble
--------------------
-
-**No model checkpoints ship with** `turbulens`. The package is inference
-code only; every command that predicts requires you to point ``--model``
-at an ensemble you already have.
-
-Ensembles are produced by this repository's separate training pipeline,
-``turbulens/training``, which writes each run under::
-
-   <output_root>/<multitask|single_<target>>/<version>/ensemble/members/
-       member_00/
-           COMPLETED.json
-           ...
-       member_01/
-           COMPLETED.json
-           ...
-
-`turbulens.models.registry.EnsembleRegistry` is the only place this
-layout is encoded. ``EnsembleRegistry.resolve`` walks from an
-``output_root`` down to the ``ensemble/members`` directory for a given
-mode (joint ``multitask``, or ``single_<target>`` for a single-target
-run) and version (a directory name, or ``"latest"`` to pick the most
-recently modified one). ``EnsembleRegistry.discover_members`` then lists
-the member subdirectories, counting only those with a ``COMPLETED.json``
-marker so that a half-written member from a crashed training job is
-never loaded.
-
-The CLI's ``--model`` argument takes the ``ensemble/members`` directory
-itself, or the literal value ``auto``, in which case ``--output-root``
-(and ``--target`` for a single-target run) drive the resolution
-described above. `turbulens.inference.Inferencer` requires at least two
-completed members, since it reports member-to-member spread as its
-epistemic uncertainty.
+   pip install -e ".[image]"  # from a checkout of this repository
 
 Quickstart
 ----------
 
 .. code-block:: bash
 
-   # Inspect an input before running inference
+   # Look at a cube: shape, units, velocity range
    turbulens inspect --input observation.fits
 
-   # Predict physical targets and write results to an ECSV table.
-   # --model points at an ensemble/members directory you supply; see
-   # "Getting an ensemble" above. --real-data is required for a real
-   # telescope observation like this one -- see :doc:`cli` for why.
-   turbulens infer --input observation.fits --channel 0 --real-data \
-       --model /path/to/ensemble/members --out predictions.ecsv
+   # Predict from the HI integrated over -100..100 km/s; --model auto
+   # downloads the pretrained ensemble on first use
+   turbulens infer --input observation.fits --velocity -100 100 \
+       --real-data --model auto --out predictions.ecsv
 
-See :doc:`cli` for every available flag, and the `Cube`, `Inferencer`,
-and `EnsembleRegistry` API pages under :doc:`api/index` for using
-`turbulens` as a library rather than a CLI.
+   # Model-free cross-check of the band edges
+   turbulens infer --input observation.fits --velocity -100 100 \
+       --method fft-powerlaw
+
+:doc:`getting_started` walks through these commands on a real GASS cube.
+
+Getting an ensemble
+-------------------
+
+``--model auto`` downloads the pretrained ensemble on first use and
+caches it. See :doc:`user_guide/pretrained_models` for pre-downloading,
+offline use, version pinning and your own ensembles.
+
+Where to read next
+------------------
+
+**If you want to run it,** start with :doc:`getting_started`, then the
+:doc:`user_guide/index`. Read :doc:`user_guide/interpreting_results` and
+:doc:`limitations` before using any number in your work.
+
+**If you are learning the subject,** read :doc:`theory/index` in order:
+power spectra and turbulence, log-normal fractal fields, and how both
+relate to HI observations. Each page starts with a plain-language
+summary.
+
+**If you are checking the method,** :doc:`method/index` gives every
+transformation, the network, the loss, and what the uncertainty means,
+each with the exact function that implements it.
+:doc:`training_pipeline/index` documents how the published models were
+selected and trained, including the leakage guards.
+
+All equations and claims taken from the literature are cited; the
+:doc:`references` list every source. The documentation explains the
+method; results and their numerical values are reported in the
+accompanying paper. To cite `turbulens`, see :doc:`citing`.
+
+.. note::
+
+   Equations are rendered with MathJax, which is loaded from a CDN. Viewed
+   offline, they appear as raw LaTeX.
 
 .. toctree::
    :maxdepth: 2
    :hidden:
 
-   concepts
-   cli
+   getting_started
+   theory/index
+   method/index
+   training_pipeline/index
+   user_guide/index
+   limitations
    api/index
+   citing
    references

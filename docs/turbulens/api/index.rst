@@ -20,3 +20,4 @@ error documentation for each class, method, and function.
    generated/turbulens.models.architecture
    generated/turbulens.models.checkpoint
    generated/turbulens.models.registry
+   generated/turbulens.training

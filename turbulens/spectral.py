@@ -4,16 +4,14 @@ Two estimators, for two different kinds of image:
 
 - `estimate_band_edges` ("band_edge" method): pyFC synthetic fractal
   images are band-limited, so power lives only within a sharp
-  ``[k_min, k_max]`` cutoff. This is the same estimator used in
-  ``archive/scripts/verify_spectra.py`` to validate `Inferencer`'s CNN
-  predictions against a classical ground truth on synthetic data.
+  ``[k_min, k_max]`` cutoff. It also serves as a classical cross-check
+  of `Inferencer`'s CNN predictions on synthetic data.
 - `fit_inertial_range` ("power_law" method): real turbulent clouds have
   a continuous power-law inertial range, ``P(k) ~ k^alpha``, not a
   sharp cutoff, so band-edge detection is physically inappropriate for
   them. Instead, `k_min`/`k_max` are read off as the injection/
   dissipation scales where the spectrum departs from the fitted power
-  law, following the method developed in
-  ``archive/observational_images/io-fits.ipynb`` for real GASS HI data.
+  law, a method developed for real GASS HI data.
 
 Both estimators warn rather than silently reporting a boundary value:
 `estimate_band_edges` requires power to exceed an adaptively-set noise
@@ -125,12 +123,12 @@ def estimate_band_edges(
     A wavenumber-position window (e.g. "the top 10% of k") was tried
     first and rejected: since a meaningful fraction of real `pyFC`
     images have a true `k_max` inside that same window, that approach
-    mistook their real signal for noise and measurably regressed
-    accuracy (`k_max` R^2 dropped from 0.91 to 0.27 on
-    ``data/raw/flat_4param_128x128_2000_disjoint_val.h5``). The
-    whole-spectrum percentile used here does not have this failure
-    mode -- see ``archive/scripts/tune_band_edges.py`` for the sweep this
-    default was chosen from, and to re-tune against other data.
+    mistook their real signal for noise and markedly degraded `k_max`
+    recovery on synthetic validation images. The whole-spectrum
+    percentile used here does not have this failure mode. The defaults
+    were chosen by a parameter sweep on synthetic validation images;
+    re-tune them before using this estimator on differently generated
+    data.
     """
     k, power = radial_power_spectrum(image)
     if power.size == 0:
@@ -198,8 +196,8 @@ def fit_inertial_range(
     k_lo_frac, k_hi_frac : float, optional
         Fraction of the maximum radial wavenumber defining the fit
         range, ``[k_lo_frac, k_hi_frac] * min(H, W) // 2``. Defaults
-        ``0.05`` and ``0.70``, matching
-        ``archive/observational_images/io-fits.ipynb``.
+        ``0.05`` and ``0.70``, the values used in the original analysis of
+        real GASS HI data.
     threshold : float, optional
         Residual threshold, in dex, defining the inertial range around
         the fitted power law. Default ``0.5``.
@@ -224,11 +222,6 @@ def fit_inertial_range(
         than `threshold`: `k_min`/`k_max` then fall back to the fit
         range's own edges (``k_lo``/``k_hi``), which are configuration,
         not a measured injection/dissipation scale.
-
-    References
-    ----------
-    Real HI cloud spectral analysis
-        ``archive/observational_images/io-fits.ipynb``, cells F4-F5.
     """
     from scipy.stats import linregress
 
@@ -293,7 +286,7 @@ class SpectralEstimator:
         ``r_squared``.
     **kwargs
         Passed to the underlying estimator function (`lo_frac`/
-        `hi_floor`/`noise_frac`/`noise_multiplier` for ``"band_edge"``;
+        `hi_floor`/`noise_percentile`/`noise_multiplier` for ``"band_edge"``;
         `k_lo_frac`/`k_hi_frac`/`threshold` for ``"power_law"``).
 
     Raises

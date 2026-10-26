@@ -28,31 +28,35 @@ turbulens infer --input observation.fits --integrate 0:100 --method fft-powerlaw
 turbulens infer --input synthetic_slice.npy --method fft-band
 ```
 
-## Quickstart: CNN prediction, needs a trained ensemble
+## Quickstart: CNN prediction
 
 ```bash
 turbulens infer --input observation.fits --integrate 0:100 --real-data \
-    --method cnn --model auto --output-root <output_root> --out predictions.ecsv
+    --method cnn --model auto --out predictions.ecsv
 ```
 
 - **`--real-data` is required for any real telescope input.** It recenters the image onto the
   training-set's own normalization scale instead of the image's own pixel range. Omitting it on real
   data silently produces confident-looking but meaningless numbers. Leave it off for synthetic pyFC
   images, which are already on the training log-density scale.
-- **`--model auto --output-root <output_root>`** resolves the newest ensemble under `<output_root>`
-  automatically; add `--target {k_min,k_max,sigma,beta}` to use that target's dedicated single-target
-  ensemble instead of the multitask one. `--model /path/to/ensemble/members` points at one directly.
+- **`--model auto`** uses the published pretrained multitask ensemble, downloaded from the
+  [`Davas1410/turbulens-ensembles`](https://huggingface.co/Davas1410/turbulens-ensembles) Hugging Face
+  repo on first use (~450 MB) and cached for later runs. Add `--target {k_min,k_max,sigma,beta}` to use
+  that target's dedicated single-target ensemble instead, and `--revision <tag-or-commit>` to pin a
+  specific release; the exact commit used is recorded in the output table's metadata.
 
 ### Getting a model
 
-`turbulens` is inference code only — it does not ship a trained ensemble. Two ways to get one:
+You don't have to do anything: `--model auto` downloads only the ensemble a command needs, the first
+time it needs it. Other options:
 
-1. **Download a pretrained ensemble** from the project's Hugging Face model repo (see the main
-   [repository README](../README.md) for the link), then point `--output-root` at wherever you
-   downloaded it.
-2. **Train your own** with `turbulens/training/` (see its own README) — a YAML-driven pipeline that
-   produces the same `<output_root>/<multitask|single_<target>>/<version>/ensemble/members/` layout
-   `--model auto` expects.
+- **Pre-download** with `turbulens download` (multitask), `turbulens download --target k_min`, or
+  `turbulens download --all`, e.g. before running on compute nodes without network access. Cached
+  ensembles keep working offline (set `HF_HUB_OFFLINE=1` to skip the network check entirely).
+- **Use your own** trained with `turbulens/training/` (see its own README): `--model auto
+  --output-root <output_root>` picks the newest ensemble from that pipeline's
+  `<output_root>/<multitask|single_<target>>/<version>/ensemble/members/` layout, and
+  `--model /path/to/ensemble/members` points at one directly.
 
 ## Using it as a library
 

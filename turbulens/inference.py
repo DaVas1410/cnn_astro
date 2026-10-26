@@ -96,10 +96,10 @@ class Inferencer:
             the image itself (see
             `turbulens.models.checkpoint.real_observation_normalization`
             for why re-deriving the scale per image would corrupt `sigma`).
-            This does not address a separate, deeper mismatch: training
-            images are single mid-plane density slices, not the
-            line-of-sight-integrated column density a real map represents,
-            so predictions on real data should still be treated as
+            This does not address the deeper mismatch between synthetic
+            2D log-normal training fields and real projected observations
+            (see the "Interpreting Results" page of the documentation), so
+            predictions on real data should still be treated as
             exploratory. Default `False` (use each member's training-time
             normalization, as for synthetic pyFC images).
 

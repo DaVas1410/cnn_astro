@@ -3,6 +3,31 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import NamedTuple
+
+from huggingface_hub import snapshot_download
+from huggingface_hub.errors import HfHubHTTPError, LocalEntryNotFoundError, RepositoryNotFoundError
+
+DEFAULT_HUB_REPO = "Davas1410/turbulens-ensembles"
+"""str: Hugging Face model repository holding the published pretrained ensembles."""
+
+
+class FetchedEnsemble(NamedTuple):
+    """An ensemble downloaded from the Hugging Face Hub by `EnsembleRegistry.fetch`.
+
+    Attributes
+    ----------
+    members_dir : pathlib.Path
+        The ``ensemble/members`` directory inside the local cache snapshot.
+    repo_id : str
+        The Hugging Face repository the ensemble came from.
+    revision : str
+        The exact repository commit hash that was downloaded, for provenance.
+    """
+
+    members_dir: Path
+    repo_id: str
+    revision: str
 
 
 class EnsembleRegistry:
@@ -11,7 +36,9 @@ class EnsembleRegistry:
     The training pipeline (`turbulens/training`) writes each
     run under ``<output_root>/<multitask|single_<target>>/<version>/ensemble/members/``,
     with one subdirectory per completed member. This class is the only
-    place `turbulens` encodes that on-disk layout.
+    place `turbulens` encodes that on-disk layout. The published
+    Hugging Face model repository mirrors the same layout, so `fetch`
+    treats a downloaded snapshot as just another output root.
     """
 
     @staticmethod
@@ -121,3 +148,73 @@ class EnsembleRegistry:
         if not members_dir.is_dir():
             raise FileNotFoundError(f"No ensemble/members directory under {version_dir}")
         return members_dir
+
+    @staticmethod
+    def fetch(
+        target: str | None = None,
+        version: str = "latest",
+        repo_id: str = DEFAULT_HUB_REPO,
+        revision: str | None = None,
+    ) -> FetchedEnsemble:
+        """
+        Download one pretrained ensemble from the Hugging Face Hub, on demand.
+
+        Parameters
+        ----------
+        target : str, optional
+            If given, fetches that target's single-target ensemble
+            (``single_<target>``); if `None` (the default), fetches the
+            joint multitask ensemble.
+        version : str, optional
+            A specific version directory name, or ``"latest"`` (the
+            default); see `resolve`.
+        repo_id : str, optional
+            Hugging Face model repository to download from. Default
+            `DEFAULT_HUB_REPO`.
+        revision : str, optional
+            Branch, tag, or commit hash to download. Default `None`, the
+            repository's ``main`` branch.
+
+        Returns
+        -------
+        FetchedEnsemble
+            The local ``ensemble/members`` directory plus the repository
+            and exact commit hash it came from.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the repository, revision, or requested ensemble cannot be
+            found, or the machine is offline and the ensemble is not
+            already cached.
+
+        Notes
+        -----
+        Only the requested ensemble's files are downloaded (about 450 MB
+        each), not the whole repository. Files land in the standard
+        Hugging Face cache (``HF_HOME``, by default
+        ``~/.cache/huggingface``) and are reused on later calls; with no
+        network, or with ``HF_HUB_OFFLINE=1``, an already-cached
+        ensemble is served from the cache.
+        """
+        mode = "multitask" if target is None else f"single_{target}"
+        pattern = f"{mode}/*" if version == "latest" else f"{mode}/{version}/*"
+        try:
+            snapshot = Path(
+                snapshot_download(repo_id, repo_type="model", revision=revision, allow_patterns=[pattern])
+            )
+        except LocalEntryNotFoundError as exc:
+            raise FileNotFoundError(
+                f"Ensemble {mode!r} from {repo_id} is not in the local cache and could not be "
+                "downloaded (offline?). Run 'turbulens download' once on a machine with network "
+                f"access to cache it. ({exc})"
+            ) from exc
+        except RepositoryNotFoundError as exc:
+            raise FileNotFoundError(
+                f"Hugging Face repository {repo_id!r} not found. If it is private, log in with "
+                f"'hf auth login' first. ({exc})"
+            ) from exc
+        except HfHubHTTPError as exc:
+            raise FileNotFoundError(f"Could not download ensemble {mode!r} from {repo_id}: {exc}") from exc
+        members_dir = EnsembleRegistry.resolve(snapshot, target=target, version=version)
+        return FetchedEnsemble(members_dir=members_dir, repo_id=repo_id, revision=snapshot.name)

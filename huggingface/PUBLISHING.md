@@ -1,89 +1,50 @@
 # Publishing turbulens to Hugging Face
 
-Staged locally in this directory: `model_card.md`, `dataset_card.md`, `space/` (Gradio app +
-GASS examples). Nothing here has been pushed yet. Steps to actually publish, once you're ready:
+Everything is staged in this folder and checked locally. One script does the whole upload.
 
-## 0. Fill in the placeholders
+## What gets published
 
-Replace `<your-hf-username>` / `<MODEL_REPO_ID>` / `<DATASET_REPO_ID>` in `model_card.md`,
-`dataset_card.md`, and `space/app.py` with your real repo IDs (e.g. `yourname/turbulens-ensembles`,
-`yourname/turbulens-synthetic-data`).
+| Repo | Id | Contents | Size |
+|---|---|---|---|
+| Model | `NAME/turbulens-ensembles` | 5 ensembles (multitask + 4 single-target), config + checkpoint per member, laid out so a download works directly as `--output-root` | 2.2 GB |
+| Dataset | `NAME/turbulens-synthetic-data` | train/val/test `.h5` files, dataset card, and the exact generator under `generation/` | 10.3 GB |
+| Space | `NAME/turbulens` | Static landing page (free) linking the model, dataset, code and guide. The Gradio demo in `space/` needs HF PRO: publish it with `--space-kind gradio` | tiny |
 
-## 1. Authenticate
+## Steps
 
-```bash
-huggingface-cli login    # or: set HF_TOKEN env var
-```
+1. Create a **write** token at huggingface.co/settings/tokens and log in (you do this, the token
+   never goes through anyone else):
 
-## 2. Create and push the model repo
+   ```bash
+   hf auth login
+   ```
 
-Only the files `load_member` actually reads are needed per member: `configuration.json`,
-`COMPLETED.json`, `checkpoints/best_checkpoint.pt` (not the plots/predictions/logs/history —
-those stay local). ~2.1 GB total across all 5 ensembles (25 members).
+2. Check everything without uploading:
 
-```python
-from huggingface_hub import HfApi, create_repo
-import shutil, pathlib
+   ```bash
+   python huggingface/publish.py --user NAME --dry-run
+   ```
 
-REPO_ID = "yourname/turbulens-ensembles"
-create_repo(REPO_ID, repo_type="model", exist_ok=True)
+3. Publish:
 
-staging = pathlib.Path("hf_staging_model")
-for mode_dir in ["multitask", "single_k_min", "single_k_max", "single_sigma", "single_beta"]:
-    src_root = pathlib.Path("outputs") / mode_dir / "local_v2" / "ensemble" / "members"
-    for member in src_root.iterdir():
-        dst = staging / mode_dir / "local_v2" / "ensemble" / "members" / member.name
-        dst.mkdir(parents=True, exist_ok=True)
-        shutil.copy(member / "configuration.json", dst / "configuration.json")
-        shutil.copy(member / "COMPLETED.json", dst / "COMPLETED.json")
-        (dst / "checkpoints").mkdir(exist_ok=True)
-        shutil.copy(member / "checkpoints" / "best_checkpoint.pt", dst / "checkpoints" / "best_checkpoint.pt")
-shutil.copy("huggingface/model_card.md", staging / "README.md")
+   ```bash
+   python huggingface/publish.py --user NAME
+   ```
 
-HfApi().upload_folder(folder_path=str(staging), repo_id=REPO_ID, repo_type="model")
-```
+   Options: `--only model dataset space` to pick parts, `--private` to create private repos.
+   If an upload is interrupted, rerun the same command; unchanged files are skipped.
 
-## 3. Create and push the dataset repo
+4. Open the three URLs it prints. The Space takes a few minutes to build on first start
+   (it installs `turbulens` from GitHub and downloads the ensembles).
 
-```python
-from huggingface_hub import HfApi, create_repo
-import shutil
+5. Link the Space and model repo from `README.md` and `GUIDE.md`.
 
-REPO_ID = "yourname/turbulens-synthetic-data"
-create_repo(REPO_ID, repo_type="dataset", exist_ok=True)
+## Notes
 
-api = HfApi()
-api.upload_file(path_or_fileobj="huggingface/dataset_card.md", path_in_repo="README.md",
-                 repo_id=REPO_ID, repo_type="dataset")
-for split, fname in [
-    ("train", "flat_4param_128x128_100000_disjoint_train.h5"),
-    ("val", "flat_4param_128x128_20000_disjoint_val.h5"),
-    ("test", "flat_4param_128x128_50000_disjoint_test.h5"),
-]:
-    api.upload_file(
-        path_or_fileobj=f"data/raw/{fname}", path_in_repo=f"{split}/{fname}",
-        repo_id=REPO_ID, repo_type="dataset",
-    )
-```
-
-## 4. Create and push the Space
-
-```bash
-huggingface-cli repo create yourname/turbulens --type space --space_sdk gradio
-```
-
-```python
-from huggingface_hub import HfApi
-HfApi().upload_folder(folder_path="huggingface/space", repo_id="yourname/turbulens", repo_type="space")
-```
-
-The Space's `app.py` downloads the model repo at startup via `snapshot_download` — make sure
-`MODEL_REPO_ID` in `app.py` is filled in and step 2 is pushed before the Space is opened.
-
-## 5. Wire the links back into the repo
-
-Once pushed, update:
-- Root `README.md`'s "Just want to run inference?" section with a link to the Space/model repo.
-- `turbulens/README.md`'s "Getting a model" section with the real model repo link.
-- `docs/turbulens/index.rst`'s "Getting an ensemble" section to mention the HF download option
-  alongside training your own.
+- Published so far (private): model, dataset and static Space under `Davas1410`. Make each public in its Settings when ready.
+- Placeholders (`<MODEL_REPO_ID>`, etc.) in the cards and `space/app.py` are filled in at upload
+  time. The files in this folder are not modified.
+- The Space installs `turbulens` from the public GitHub repo, so GitHub `main` must contain the
+  version you want the Space to run.
+- To test the Space locally before publishing: import `huggingface/space/app.py`, set
+  `app._ENSEMBLE_ROOT = Path("outputs")`, and call `app.predict(...)`.

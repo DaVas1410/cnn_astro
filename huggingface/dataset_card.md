@@ -14,7 +14,7 @@ size_categories:
 170,000 synthetic 128x128 log-normal fractal density images (100,000 train / 20,000 validation /
 50,000 test), generated with [pyFC](https://bitbucket.org/pandante/pyfc), labeled with the four
 generating parameters `k_min`, `k_max`, `sigma`, `beta`. This is the training data for the
-[`turbulens`](<MODEL_REPO_ID>) deep-ensemble CNN parameter-estimation models.
+[`turbulens`](https://huggingface.co/<MODEL_REPO_ID>) deep-ensemble CNN parameter-estimation models.
 
 ## Files
 
@@ -56,12 +56,12 @@ Parameters are drawn independently and uniformly per image (no two images share 
 
 `k_max`'s upper bound (64) is the Nyquist frequency of the 128-pixel grid. Each split used its own
 master seed so parameter draws and pyFC seeds never overlap between splits: 1000 (train), 2000
-(validation), 3000 (test). Reproduce with `archive/scripts/gen_splits_disjoint.sh` in the source repository.
+(validation), 3000 (test). Reproduce with `bash generation/scripts/gen_splits_disjoint.sh` (the exact generator is bundled in this repo under `generation/`).
 
 **Provenance note:** an earlier version of this dataset's own generation had a `pyFC` bug where the
-upper spectral cutoff was not enforced (`k_max` was label-only, not an actual image feature) — see
-`archive/docs/bugs/pyfc-kmax-not-enforced.md` in the source repo. This release was generated after that fix
-(`archive/src/pyFC_lib/pyFC/clouds.py`'s `func_target_spec` band-limits to `[k_min, k_max]`), matching the data
+upper spectral cutoff was not enforced (`k_max` was label-only, not an actual image feature). This
+release was generated after that fix (`generation/src/pyFC_lib/pyFC/clouds.py`'s `func_target_spec`
+band-limits to `[k_min, k_max]`), matching the data
 the published `turbulens` model ensembles were trained on.
 
 ## Splits

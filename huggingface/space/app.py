@@ -46,7 +46,7 @@ def _project(cube, channel: int | None, integrate: str):
 
 def _plot_image(image: np.ndarray) -> plt.Figure:
     fig, ax = plt.subplots(figsize=(4, 4))
-    im = ax.imshow(image, origin="lower", cmap="viridis")
+    im = ax.imshow(np.squeeze(image), origin="lower", cmap="viridis")
     fig.colorbar(im, ax=ax, fraction=0.046)
     ax.set_title("Input image (post-projection)")
     fig.tight_layout()
@@ -60,7 +60,7 @@ def predict(
         raise gr.Error("Upload a FITS cube, or a PNG/TIFF/.npy image first.")
 
     try:
-        cube = load_input(file.name)
+        cube = load_input(file if isinstance(file, str) else file.name)
     except (FileNotFoundError, ValueError, OSError) as exc:
         raise gr.Error(f"Could not read input: {exc}") from exc
 
@@ -113,8 +113,8 @@ with gr.Blocks(title="turbulens") as demo:
                 value="multitask (all four)", label="Target (cnn method only)",
             )
             real_data = gr.Checkbox(
-                label="Real observation (--real-data)", value=False,
-                info="Required for real telescope data; leave off for synthetic pyFC images. "
+                label="Real observation (--real-data)", value=True,
+                info="On for real telescope data (the bundled examples); turn off for synthetic pyFC images. "
                 "Recenters onto the training-set scale instead of the image's own pixel range.",
             )
             with gr.Row():

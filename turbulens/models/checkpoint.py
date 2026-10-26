@@ -257,8 +257,8 @@ def real_observation_normalization(
     """
     Log10-transform a real observation and recenter it onto a member's training scale.
 
-    Training images are generated as ``log10(density_slice)`` of a synthetic
-    fractal cube (see `src/dataset_generator.py`), then percentile-normalized
+    Training images are ``log10(density)`` of synthetic 2D log-normal
+    fractal fields generated with pyFC, then percentile-normalized
     using stats computed once across the whole training set. A real
     observation (e.g. a GASS HI brightness-temperature map) is neither
     log-transformed nor on that same absolute scale (different surveys and
@@ -277,7 +277,7 @@ def real_observation_normalization(
     normalized image as its cue for `sigma` (the log-normal field's
     single-point standard deviation, by definition how wide that spread is);
     since every synthetic training image shares the same fixed density
-    scale (`src/param_sampler.py`'s ``mean_range``) and only `sigma` moves
+    scale (the generator fixes the mean density at 1) and only `sigma` moves
     its width, `member_normalization`'s ``lower_value``/``upper_value`` (fit
     once, across many training images) is exactly the width scale the model
     learned to interpret. Re-deriving that width from a single real image,
@@ -285,7 +285,7 @@ def real_observation_normalization(
     the same apparent contrast regardless of its true spread, actively
     erasing the amplitude signal `sigma` depends on -- observed in practice
     as wildly unstable ensemble disagreement on `sigma` for some real
-    cubes and not others (`notebooks/turbulens_multitask_results.ipynb`).
+    cubes and not others.
     Recentering only, and reusing the member's fixed width, keeps real
     images with different true amplitudes comparably positioned to how
     the model saw amplitude differences during training.

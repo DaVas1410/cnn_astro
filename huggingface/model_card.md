@@ -8,7 +8,6 @@ tags:
   - regression
   - uncertainty-quantification
 library_name: pytorch
-pipeline_tag: image-to-text
 ---
 
 # turbulens: fractal-turbulence parameter ensembles
@@ -41,8 +40,8 @@ this repo can be used directly as `--output-root`.
 ## Use
 
 ```bash
-pip install "turbulens[image] @ git+https://github.com/wbandabarragan/cnn-turbulence.git#subdirectory=."
-huggingface-cli download <REPO_ID> --local-dir ./turbulens-ensembles
+pip install "turbulens[image] @ git+https://github.com/wbandabarragan/cnn-turbulence.git"
+hf download <MODEL_REPO_ID> --local-dir ./turbulens-ensembles
 
 # Synthetic image (already on the training log-density scale)
 turbulens infer --input slice.npy --method cnn --model auto \

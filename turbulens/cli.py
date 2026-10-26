@@ -1,4 +1,4 @@
-"""The `turbulens` command-line interface: `infer` and `inspect` subcommands."""
+"""The `turbulens` command-line interface: `infer`, `inspect`, and `download` subcommands."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from turbulens.io.cube import Cube
 from turbulens.io.image_loaders import load_input
 from turbulens.io.report import format_breakdown_cli, write_breakdown_html, write_breakdown_json
 from turbulens.io.results import write_results
-from turbulens.models.registry import EnsembleRegistry
+from turbulens.models.registry import EnsembleRegistry, FetchedEnsemble
 from turbulens.spectral import SpectralEstimator
 
 
@@ -26,11 +26,12 @@ def build_parser() -> argparse.ArgumentParser:
     Returns
     -------
     argparse.ArgumentParser
-        A parser with two subcommands: ``infer`` (predict physical
-        targets from a FITS cube or image) and ``inspect`` (summarize a
+        A parser with three subcommands: ``infer`` (predict physical
+        targets from a FITS cube or image), ``inspect`` (summarize a
         cube's shape, WCS, and pixel statistics without running a
-        model). See each subcommand's own ``--help`` for its arguments;
-        the full rendered reference is in :doc:`/cli`.
+        model), and ``download`` (pre-fetch pretrained ensembles from
+        the Hugging Face Hub). See each subcommand's own ``--help`` for its arguments;
+        the full rendered reference is in :doc:`/user_guide/cli`.
     """
     parser = argparse.ArgumentParser(prog="turbulens")
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
@@ -40,7 +41,7 @@ def build_parser() -> argparse.ArgumentParser:
     infer.add_argument(
         "--config", default=None,
         help="Path to a JSON file of infer options (keys: input, hdu, channel, integrate, velocity, "
-        "method, model, target, real_data, output_root, out -- same names as the flags below, with "
+        "method, model, target, real_data, output_root, revision, out -- same names as the flags below, with "
         "dashes as underscores). Fills in any option not explicitly passed as a flag; an explicit "
         "flag always overrides the matching JSON key.",
     )
@@ -69,8 +70,10 @@ def build_parser() -> argparse.ArgumentParser:
     infer.add_argument(
         "--model", default=None,
         help="Path to a '.../ensemble/members' directory (not the 'ensemble' or version directory "
-        "above it), or 'auto' to resolve one automatically from --output-root (newest version, by "
-        "modification time, of the multitask ensemble unless --target is also given).",
+        "above it), or 'auto' to pick the multitask ensemble (or --target's single-target one) "
+        "automatically: from --output-root if given (newest version, by modification time), otherwise "
+        "the published pretrained ensemble, downloaded from the Hugging Face Hub on first use and "
+        "cached for later runs.",
     )
     infer.add_argument(
         "--target", default=None, choices=["k_min", "k_max", "sigma", "beta"],
@@ -86,7 +89,17 @@ def build_parser() -> argparse.ArgumentParser:
         "it on real data silently produces confident-looking but meaningless predictions. See "
         "turbulens.models.checkpoint.real_observation_normalization.",
     )
-    infer.add_argument("--output-root", default=None, help="Pipeline output root; required when --model auto.")
+    infer.add_argument(
+        "--output-root", default=None,
+        help="--model auto only. Your own training pipeline's output root to pick the ensemble from, "
+        "instead of downloading the published one.",
+    )
+    infer.add_argument(
+        "--revision", default=None,
+        help="--model auto without --output-root only. Hugging Face branch, tag, or commit hash of the "
+        "pretrained ensembles to use; default is the latest. The exact commit used is always recorded "
+        "in the output table's metadata.",
+    )
     infer.add_argument("--out", default=None, help="Output path (.ecsv recommended). Prints to stdout if omitted.")
 
     inspect_parser = subparsers.add_parser(
@@ -100,13 +113,31 @@ def build_parser() -> argparse.ArgumentParser:
     inspect_parser.add_argument(
         "--html", default=None, help="Write the breakdown as a minimal HTML report to this path."
     )
+
+    download = subparsers.add_parser(
+        "download",
+        help="Download pretrained ensembles from the Hugging Face Hub into the local cache ahead of time "
+        "(e.g. before running offline on a compute node). Not required: 'infer --model auto' downloads "
+        "what it needs on first use.",
+    )
+    which = download.add_mutually_exclusive_group()
+    which.add_argument(
+        "--target", default=None, choices=["k_min", "k_max", "sigma", "beta"],
+        help="Download this target's single-target ensemble instead of the multitask one (the default).",
+    )
+    which.add_argument(
+        "--all", action="store_true", help="Download every ensemble: multitask plus all four single-target."
+    )
+    download.add_argument(
+        "--revision", default=None, help="Hugging Face branch, tag, or commit hash; default is the latest."
+    )
     return parser
 
 
 _INFER_CONFIG_DEFAULTS = {
     "input": None, "hdu": None, "channel": None, "integrate": None, "velocity": None,
     "method": "cnn", "model": None, "target": None, "real_data": False,
-    "output_root": None, "out": None,
+    "output_root": None, "revision": None, "out": None,
 }
 """dict: `infer` option names loadable from `--config`, mapped to their argparse defaults.
 
@@ -132,15 +163,18 @@ def _apply_config_file(args: argparse.Namespace, parser: argparse.ArgumentParser
             setattr(args, key, value)
 
 
-def _resolve_members_dir(args: argparse.Namespace, parser: argparse.ArgumentParser) -> Path:
-    """Resolve `--model` to a concrete ensemble members directory, handling `--model auto`."""
+def _resolve_members_dir(args: argparse.Namespace, parser: argparse.ArgumentParser) -> Path | FetchedEnsemble:
+    """Resolve `--model` to an ensemble members directory, or a Hub download for `--model auto`."""
     if args.model != "auto":
-        if args.target is not None:
-            parser.error("--target requires --model auto; it has no effect with an explicit --model path.")
+        for flag, value in (("--target", args.target), ("--output-root", args.output_root), ("--revision", args.revision)):
+            if value is not None:
+                parser.error(f"{flag} requires --model auto; it has no effect with an explicit --model path.")
         return Path(args.model)
-    if not args.output_root:
-        parser.error("--output-root is required when --model auto.")
-    return EnsembleRegistry.resolve(args.output_root, target=args.target)
+    if args.output_root:
+        if args.revision is not None:
+            parser.error("--revision only applies to the Hugging Face download; drop it or drop --output-root.")
+        return EnsembleRegistry.resolve(args.output_root, target=args.target)
+    return EnsembleRegistry.fetch(target=args.target, revision=args.revision)
 
 
 def _validate_input_selection(args: argparse.Namespace, parser: argparse.ArgumentParser, cube: Cube) -> None:
@@ -198,6 +232,7 @@ def run_infer(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None
         ignored = [
             name for name, value in (
                 ("--model", args.model), ("--target", args.target), ("--real-data", args.real_data or None),
+                ("--output-root", args.output_root), ("--revision", args.revision),
             )
             if value is not None
         ]
@@ -252,10 +287,13 @@ def run_infer(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None
         if args.model is None:
             parser.error("--model is required.")
         try:
-            members_dir = _resolve_members_dir(args, parser)
+            resolved = _resolve_members_dir(args, parser)
+            members_dir = resolved.members_dir if isinstance(resolved, FetchedEnsemble) else resolved
             table = Inferencer(members_dir).predict(image_cube.data, real_data=args.real_data)
         except FileNotFoundError as exc:
             parser.error(str(exc))
+        if isinstance(resolved, FetchedEnsemble):
+            table.meta.update({"model_repo": resolved.repo_id, "model_revision": resolved.revision})
         table.meta.update({
             "input_path": args.input,
             "method": args.method,
@@ -303,6 +341,33 @@ def run_inspect(args: argparse.Namespace, parser: argparse.ArgumentParser) -> No
         write_breakdown_html(breakdown, args.html)
 
 
+def run_download(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
+    """
+    Run the ``download`` subcommand: fetch ensembles into the Hugging Face cache, print their paths.
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Parsed arguments from the ``download`` subparser built by
+        `build_parser`.
+    parser : argparse.ArgumentParser
+        The top-level parser, used for `parser.error` on download
+        failures.
+
+    Notes
+    -----
+    Each printed path is an ``ensemble/members`` directory that can also
+    be passed to ``infer --model`` directly.
+    """
+    targets = [None, "k_min", "k_max", "sigma", "beta"] if args.all else [args.target]
+    for target in targets:
+        try:
+            fetched = EnsembleRegistry.fetch(target=target, revision=args.revision)
+        except FileNotFoundError as exc:
+            parser.error(str(exc))
+        print(f"{target or 'multitask'}: {fetched.members_dir} ({fetched.repo_id}@{fetched.revision[:12]})")
+
+
 def main(argv: list[str] | None = None) -> None:
     """
     Entry point for the `turbulens` console script.
@@ -320,6 +385,8 @@ def main(argv: list[str] | None = None) -> None:
         run_infer(args, parser)
     elif args.command == "inspect":
         run_inspect(args, parser)
+    elif args.command == "download":
+        run_download(args, parser)
 
 
 if __name__ == "__main__":
