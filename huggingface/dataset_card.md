@@ -9,6 +9,8 @@ size_categories:
   - 100K<n<1M
 ---
 
+<p align="center"><img src="logo.png" alt="turbulens logo" width="140"></p>
+
 # turbulens synthetic fractal-turbulence dataset
 
 170,000 synthetic 128x128 log-normal fractal density images (100,000 train / 20,000 validation /

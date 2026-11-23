@@ -152,6 +152,30 @@ def test_fetch_explains_an_offline_cache_miss(tmp_path, monkeypatch):
         EnsembleRegistry.fetch()
 
 
+def test_fetch_splits_an_incomplete_snapshot_error_into_lines(monkeypatch):
+    def incomplete(repo_id, **kwargs):
+        raise LocalEntryNotFoundError(
+            f"The cached snapshot for '{repo_id}' (revision 'main', commit abc) is incomplete: 15 file(s) are "
+            "missing (single_k_min/a.json, single_k_min/b.pt, single_k_min/c.json, ... (12 more)). The Hub could "
+            "not be reached (OfflineModeIsEnabled: offline). Re-run the download with network access."
+        )
+    monkeypatch.setattr(registry, "snapshot_download", incomplete)
+
+    with pytest.raises(FileNotFoundError) as info:
+        EnsembleRegistry.fetch(target="k_min")
+
+    assert str(info.value).splitlines() == [
+        "Ensemble 'single_k_min' from cPhysPlus/turbulens-ensembles is not fully cached, and the Hub could not "
+        "be reached (offline?).",
+        "  Missing 15 files:",
+        "    single_k_min/a.json",
+        "    single_k_min/b.pt",
+        "    single_k_min/c.json",
+        "    ... and 12 more",
+        "  Fix: run `turbulens download --target k_min` once with network access, then retry.",
+    ]
+
+
 def test_fetch_raises_when_the_repo_has_no_such_ensemble(tmp_path, monkeypatch):
     calls = []
     monkeypatch.setattr(registry, "snapshot_download", _fake_snapshot_download(tmp_path, calls, modes=()))

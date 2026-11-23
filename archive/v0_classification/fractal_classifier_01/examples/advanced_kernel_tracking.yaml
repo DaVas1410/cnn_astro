@@ -1,0 +1,207 @@
+# Advanced Configuration with Kernel Export and Enhanced Training
+# This configuration demonstrates all new features including:
+# - Kernel convergence tracking
+# - Advanced data augmentation
+# - Regularization options
+# - TensorBoard logging
+# - Kernel export for convergence analysis
+
+# Data configuration
+data:
+  h5_path: "fractal_dataset.h5"
+  h5_intermediate_path: "fractal_dataset_intermediate.h5"
+  input_shape: [512, 512, 1]
+  num_classes: 6
+  k_values: [2, 4, 8, 16, 32, 64]
+  
+  split:
+    train_ratio: 0.7
+    val_ratio: 0.15
+    test_ratio: 0.15
+    random_state: 42
+    stratify: true
+
+# Model architecture
+model:
+  filters: [32, 64, 128, 256]
+  kernel_size: 3
+  padding: "same"
+  activation: "relu"
+  dense_units: 64
+  dropout_rate: 0.5
+  pool_size: 2
+  output_activation: "softmax"
+  output_dtype: "float32"
+
+# Training configuration WITH ENHANCEMENTS
+training:
+  epochs: 50
+  batch_size: 4
+  learning_rate: 0.0001
+  
+  # Enhanced optimizer configuration
+  optimizer:
+    name: "adam"  # Can also use "adamw", "sgd", "rmsprop"
+    beta_1: 0.9
+    beta_2: 0.999
+    epsilon: 0.0000001
+    # For SGD:
+    # momentum: 0.9
+    # nesterov: true
+  
+  # Learning rate schedule (optional, beyond ReduceLROnPlateau)
+  lr_schedule:
+    enabled: false
+    type: "cosine_decay"
+    cosine_decay:
+      decay_steps: null  # Uses total training steps
+      alpha: 0.0
+  
+  loss: "sparse_categorical_crossentropy"
+  metrics:
+    - "sparse_categorical_accuracy"
+  
+  pipeline:
+    shuffle_buffer: 512
+    num_parallel_calls: 2
+    prefetch: 1
+    shuffle_seed: 42
+  
+  # ENHANCED DATA AUGMENTATION
+  augmentation:
+    horizontal_flip: true
+    vertical_flip: true
+    rotation_range: 15  # Degrees of random rotation
+    zoom_range: 0.1  # 10% zoom
+    brightness_range: null  # [0.9, 1.1] for brightness variation
+    contrast_range: null  # [0.9, 1.1] for contrast variation
+  
+  # REGULARIZATION OPTIONS
+  regularization:
+    kernel_regularizer:
+      type: null  # "l1", "l2", or "l1_l2"
+      l1: 0.0
+      l2: 0.0
+    conv_dropout: 0.0  # Dropout in conv blocks
+    weight_decay: 0.0  # For AdamW optimizer
+    gradient_clip:
+      enabled: false
+      type: "norm"
+      value: 1.0
+  
+  # BATCH NORMALIZATION
+  batch_norm:
+    enabled: false
+    momentum: 0.99
+    epsilon: 0.001
+    position: "after_activation"
+  
+  # Callbacks configuration
+  callbacks:
+    model_checkpoint:
+      enabled: true
+      monitor: "val_sparse_categorical_accuracy"
+      save_best_only: true
+      verbose: 1
+    
+    early_stopping:
+      enabled: true
+      monitor: "val_sparse_categorical_accuracy"
+      patience: 10
+      restore_best_weights: true
+      verbose: 1
+    
+    reduce_lr:
+      enabled: true
+      monitor: "val_sparse_categorical_accuracy"
+      factor: 0.5
+      patience: 5
+      min_lr: 0.0000001
+      verbose: 1
+    
+    csv_logger:
+      enabled: true
+      append: false
+    
+    # TENSORBOARD LOGGING
+    tensorboard:
+      enabled: true
+      write_graph: true
+      write_images: false
+      update_freq: "epoch"  # or "batch" or integer
+      profile_batch: 0  # 0 disables profiling
+      histogram_freq: 1  # Save histograms every epoch
+    
+    # KERNEL EXPORT - TRACKS CONVERGENCE
+    kernel_export:
+      enabled: true
+      frequency: "epoch"  # Save every epoch
+      # Or save at specific epochs only:
+      # export_epochs: [1, 5, 10, 20, 30, 40, 50]
+      export_epochs: null
+      format: "hdf5"  # "hdf5", "npz", or "both"
+
+# GPU configuration
+gpu:
+  memory_growth: true
+  allocator: "cuda_malloc_async"
+  mixed_precision:
+    enabled: true
+    policy: "mixed_float16"
+
+# Evaluation configuration
+evaluation:
+  batch_size: 4
+  confusion_matrix_samples: 20
+  export:
+    per_image_csv: true
+    readable_csv: true
+    summary_csv: true
+
+# Visualization configuration
+visualization:
+  activations:
+    enabled: true
+    num_samples: 3
+    dpi: 150
+  
+  kernels:
+    enabled: true
+    dpi: 150
+  
+  # KERNEL CONVERGENCE ANALYSIS
+  kernel_analysis:
+    enabled: true
+    plot_evolution: true
+    compute_stats: true
+    similarity_metrics: ["cosine", "euclidean", "correlation"]
+    export_final_weights: true
+  
+  plots:
+    enabled: true
+    dpi: 300
+    formats: ["png", "pdf"]
+    smooth_window: 3
+    style: "seaborn-v0_8-darkgrid"
+
+# Paths configuration
+paths:
+  output_dir: "outputs"
+  checkpoint_dir: "checkpoints"
+  best_model: "best_model.h5"
+  history_csv: "training_history.csv"
+  activations_dir: "activations_samples"
+  kernels_dir: "kernels"
+  kernel_weights_dir: "kernel_weights"  # For exported kernel checkpoints
+  kernel_analysis_dir: "kernel_analysis"  # For convergence analysis results
+  tensorboard_log_dir: "logs"  # For TensorBoard logs
+  analysis_dir: "analysis"
+  eval_per_image_csv: "per_image_centroids.csv"
+  eval_readable_csv: "intermediate_eval_readable.csv"
+  eval_summary_csv: "intermediate_eval_group_summary.csv"
+  eval_predictions_csv: "eval_samples_predictions.csv"
+
+# Logging configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

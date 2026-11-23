@@ -31,7 +31,7 @@ from __future__ import annotations
 import warnings
 
 import numpy as np
-from astropy.table import QTable
+from astropy.table import MaskedColumn, QTable
 
 
 def radial_power_spectrum(image: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
@@ -65,7 +65,7 @@ def radial_power_spectrum(image: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
 def estimate_band_edges(
     image: np.ndarray, lo_frac: float = 0.1, hi_floor: float = 1e-12,
     noise_percentile: float = 3.0, noise_multiplier: float = 3.0,
-) -> dict[str, float]:
+) -> dict[str, float | None]:
     """
     Estimate k_min and k_max from a sharp spectral band edge (synthetic data).
 
@@ -103,7 +103,7 @@ def estimate_band_edges(
     Returns
     -------
     dict
-        ``{"k_min": float, "k_max": float}``, or ``nan`` for both if the
+        ``{"k_min": float, "k_max": float}``, or `None` for both if the
         image has no power (e.g. is uniformly constant) or is too small
         to have any radial bins (`radial_power_spectrum` needs
         ``min(H, W) >= 3``).
@@ -134,18 +134,18 @@ def estimate_band_edges(
     if power.size == 0:
         warnings.warn(
             "estimate_band_edges: image too small to have any radial wavenumber bins "
-            "(radial_power_spectrum needs min(H, W) >= 3); returning nan for k_min/k_max.",
+            "(radial_power_spectrum needs min(H, W) >= 3); returning None for k_min/k_max.",
             stacklevel=2,
         )
-        return {"k_min": float("nan"), "k_max": float("nan")}
+        return {"k_min": None, "k_max": None}
     peak = power.max()
     if peak <= 0:
         warnings.warn(
             "estimate_band_edges: image has no power (uniformly constant, or all-zero spectrum); "
-            "returning nan for k_min/k_max.",
+            "returning None for k_min/k_max.",
             stacklevel=2,
         )
-        return {"k_min": float("nan"), "k_max": float("nan")}
+        return {"k_min": None, "k_max": None}
     normalized = power / peak
 
     noise_floor = float(np.percentile(normalized, noise_percentile))
@@ -156,11 +156,11 @@ def estimate_band_edges(
     if len(above_lo) == 0 or len(above_hi_floor) == 0:
         warnings.warn(
             "estimate_band_edges: no wavenumber bin exceeded the lo_frac/noise-floor thresholds "
-            "anywhere in the spectrum; returning nan for k_min/k_max. The image may be pure noise "
+            "anywhere in the spectrum; returning None for k_min/k_max. The image may be pure noise "
             "or far outside the range this estimator was tuned for.",
             stacklevel=2,
         )
-        return {"k_min": float("nan"), "k_max": float("nan")}
+        return {"k_min": None, "k_max": None}
 
     k_min, k_max = k[above_lo[0]], k[above_hi_floor[-1]]
     if k_min == k[0] or k_max == k[-1]:
@@ -177,7 +177,7 @@ def estimate_band_edges(
 
 def fit_inertial_range(
     image: np.ndarray, k_lo_frac: float = 0.05, k_hi_frac: float = 0.70, threshold: float = 0.5,
-) -> dict[str, float]:
+) -> dict[str, float | None]:
     """
     Estimate the spectral index and inertial-range k_min/k_max of a real turbulent image.
 
@@ -206,7 +206,7 @@ def fit_inertial_range(
     -------
     dict
         ``{"alpha": float, "r_squared": float, "k_min": float, "k_max":
-        float}``. All four are ``nan`` if fewer than 3 points fall in
+        float}``. All four are `None` if fewer than 3 points fall in
         the fit range or the image is too small to have any radial
         bins. `r_squared` is the fitted line's coefficient of
         determination over the fit range: it is close to ``0`` (or
@@ -227,14 +227,14 @@ def fit_inertial_range(
 
     k, power = radial_power_spectrum(image)
     if power.size == 0:
-        return {"alpha": float("nan"), "r_squared": float("nan"), "k_min": float("nan"), "k_max": float("nan")}
+        return {"alpha": None, "r_squared": None, "k_min": None, "k_max": None}
 
     k_radius_max = k[-1] + 1  # min(cx, cy) from radial_power_spectrum
     k_lo = max(2, int(k_lo_frac * k_radius_max))
     k_hi = int(k_hi_frac * k_radius_max)
     in_fit_range = (k >= k_lo) & (k <= k_hi) & (power > 0)
     if in_fit_range.sum() < 3:
-        return {"alpha": float("nan"), "r_squared": float("nan"), "k_min": float("nan"), "k_max": float("nan")}
+        return {"alpha": None, "r_squared": None, "k_min": None, "k_max": None}
 
     slope, intercept, r_value, _, _ = linregress(np.log10(k[in_fit_range].astype(float)), np.log10(power[in_fit_range]))
     fitted_log_power = intercept + slope * np.log10(k.astype(float))
@@ -264,7 +264,9 @@ def fit_inertial_range(
         run_end += 1
 
     k_min, k_max = k[run_start], k[run_end]
-    return {"alpha": float(slope), "r_squared": float(r_value**2), "k_min": float(k_min), "k_max": float(k_max)}
+    fit = {"alpha": float(slope), "r_squared": float(r_value**2), "k_min": float(k_min), "k_max": float(k_max)}
+    # linregress gives nan slope/r for a degenerate (e.g. perfectly flat) spectrum; report that as None.
+    return {key: value if np.isfinite(value) else None for key, value in fit.items()}
 
 
 class SpectralEstimator:
@@ -273,7 +275,8 @@ class SpectralEstimator:
 
     A model-free counterpart to `turbulens.inference.Inferencer`: no
     ensemble or training is involved, so `predict` is deterministic and
-    the returned table's ``epistemic_std`` column is always ``nan``.
+    the returned table's ``epistemic_std`` column is always masked
+    (there is no ensemble spread to report).
 
     Parameters
     ----------
@@ -316,7 +319,7 @@ class SpectralEstimator:
         astropy.table.QTable
             One row per ``(image, target)`` pair, with columns
             ``image_index``, ``target``, ``value``, and
-            ``epistemic_std`` (always ``nan``), matching the schema of
+            ``epistemic_std`` (always masked), matching the schema of
             `turbulens.inference.Inferencer.predict`. ``target`` is
             ``"k_min"``/``"k_max"`` for ``method="band_edge"``, and
             ``"k_min"``/``"k_max"``/``"alpha"``/``"r_squared"`` for
@@ -324,6 +327,8 @@ class SpectralEstimator:
             included as rows, not only in ``table.meta``, so they
             survive non-ECSV output formats
             (`turbulens.io.results.write_results`) that drop metadata.
+            A ``value`` the estimator could not compute (it returned
+            `None`) is masked rather than stored as ``nan``.
 
         Raises
         ------
@@ -342,18 +347,17 @@ class SpectralEstimator:
         image_indices = []
         target_names = []
         values = []
-        epistemic_stds = []
         for image_index, image in enumerate(images):
             edges = estimator(image, **self.kwargs)
             for target in targets:
                 image_indices.append(image_index)
                 target_names.append(target)
                 values.append(edges[target])
-                epistemic_stds.append(float("nan"))
 
+        missing = np.array([value is None for value in values])
         table = QTable()
         table["image_index"] = image_indices
         table["target"] = target_names
-        table["value"] = values
-        table["epistemic_std"] = epistemic_stds
+        table["value"] = MaskedColumn([0.0 if value is None else value for value in values], mask=missing)
+        table["epistemic_std"] = MaskedColumn(np.zeros(len(values)), mask=np.ones(len(values), dtype=bool))
         return table

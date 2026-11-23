@@ -62,6 +62,8 @@ def test_infer_command_writes_results_with_explicit_model_path(tmp_path):
     assert list(table["target"]) == ["k_min"]
     assert table.meta["input_path"] == str(fits_path)
     assert table.meta["turbulens_version"]
+    assert table.meta["model"] == "ensemble_root"
+    assert str(tmp_path) not in out_path.read_text().replace(str(fits_path), "")
 
 
 def test_infer_command_resolves_model_auto_from_output_root(tmp_path):
@@ -83,6 +85,8 @@ def test_infer_command_resolves_model_auto_from_output_root(tmp_path):
 
     table = QTable.read(out_path)
     assert len(table) == 1
+    assert table.meta["model"] == "multitask/v1"
+    assert str(output_root) not in out_path.read_text()
 
 
 def test_infer_command_resolves_model_auto_with_target_to_single_target_ensemble(tmp_path):
@@ -403,12 +407,13 @@ def test_inspect_command_prints_breakdown_to_stdout(tmp_path, capsys):
     main(["inspect", "--input", str(tmp_path / "image.npy")])
 
     captured = capsys.readouterr()
-    assert "Shape:" in captured.out
+    assert "Shape" in captured.out
     assert "already-projected image" in captured.out.lower()
 
 
 def test_inspect_command_writes_json_and_html(tmp_path):
     import json
+
     import numpy as np
     np.save(tmp_path / "image.npy", np.zeros((4, 4), dtype=np.float32))
     json_path = tmp_path / "out.json"
@@ -421,7 +426,7 @@ def test_inspect_command_writes_json_and_html(tmp_path):
 
     payload = json.loads(json_path.read_text())
     assert payload["n_channels"] == 1
-    assert "<html>" in html_path.read_text()
+    assert html_path.read_text(encoding="utf-8").startswith("<!doctype html>")
 
 
 def test_inspect_command_requires_input(tmp_path):
@@ -514,7 +519,7 @@ def test_infer_command_method_fft_band_recovers_band_edges(tmp_path):
     ])
 
     table = QTable.read(out_path)
-    values = dict(zip(table["target"], table["value"]))
+    values = dict(zip(table["target"], table["value"], strict=True))
     assert abs(values["k_min"] - kmin) <= 3
     assert abs(values["k_max"] - kmax) <= 3
 
@@ -533,6 +538,43 @@ def test_infer_command_method_fft_powerlaw_needs_no_model(tmp_path):
     assert list(table["target"]) == ["k_min", "k_max", "alpha", "r_squared"]
     assert table.meta["method"] == "fft-powerlaw"
     assert "model" not in table.meta
+
+
+def test_infer_command_writes_a_diagnostic_plot(tmp_path, capsys):
+    pytest.importorskip("matplotlib")
+    image = np.random.default_rng(0).normal(size=(64, 64)).astype(np.float32)
+    np.save(tmp_path / "image.npy", image)
+    plot_path = tmp_path / "diagnostic.png"
+
+    main(["infer", "--input", str(tmp_path / "image.npy"), "--method", "fft-powerlaw", "--plot", str(plot_path)])
+
+    assert plot_path.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
+    assert "Plot written to" in capsys.readouterr().out
+
+
+def test_inspect_command_writes_a_diagnostic_plot_for_a_cube(tmp_path, capsys):
+    pytest.importorskip("matplotlib")
+    fits_path = tmp_path / "cube.fits"
+    fits.PrimaryHDU(data=np.random.default_rng(1).normal(size=(3, 64, 64)).astype(np.float32)).writeto(fits_path)
+    plot_path = tmp_path / "diagnostic.svg"
+
+    main(["inspect", "--input", str(fits_path), "--plot", str(plot_path)])
+
+    assert plot_path.read_text(encoding="utf-8").lstrip().startswith("<?xml")
+    assert "Plot written to" in capsys.readouterr().out
+
+
+def test_plot_without_matplotlib_is_a_clear_usage_error(tmp_path, monkeypatch, capsys):
+    import sys
+
+    np.save(tmp_path / "image.npy", np.zeros((16, 16), dtype=np.float32))
+    monkeypatch.setitem(sys.modules, "matplotlib", None)  # makes `import matplotlib` raise ImportError
+
+    with pytest.raises(SystemExit):
+        main(["infer", "--input", str(tmp_path / "image.npy"), "--method", "fft-band",
+              "--plot", str(tmp_path / "p.png")])
+
+    assert 'pip install "turbulens[plot]"' in capsys.readouterr().err
 
 
 def test_inspect_command_reports_spectral_estimate_for_projected_image(tmp_path, capsys):

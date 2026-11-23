@@ -9,8 +9,12 @@ The published ensembles
 -----------------------
 
 The pretrained deep ensembles are published in the Hugging Face model
-repository ``Davas1410/turbulens-ensembles``. They are not bundled with
-the package. It holds five ensembles of five members each:
+repository ``cPhysPlus/turbulens-ensembles``. They are not bundled with
+the package. While the repository is private, downloading needs a
+Hugging Face account with access to the ``cPhysPlus`` organization,
+logged in with ``hf auth login``.
+
+The repository holds five ensembles of five members each:
 
 .. list-table::
    :header-rows: 1

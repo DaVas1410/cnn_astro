@@ -1,0 +1,125 @@
+# Full Training Configuration for Fractal Classifier
+# Production settings matching the original notebook workflow
+
+data:
+  h5_path: "fractal_dataset.h5"
+  h5_intermediate_path: "fractal_dataset_intermediate.h5"
+  input_shape: [512, 512, 1]
+  num_classes: 6
+  k_values: [2, 4, 8, 16, 32, 64]
+  
+  split:
+    train_ratio: 0.7
+    val_ratio: 0.15
+    test_ratio: 0.15
+    random_state: 42
+    stratify: true
+
+model:
+  filters: [32, 64, 128, 256]
+  kernel_size: 3
+  padding: "same"
+  activation: "relu"
+  dense_units: 64
+  dropout_rate: 0.5
+  pool_size: 2
+  output_activation: "softmax"
+  output_dtype: "float32"
+
+training:
+  epochs: 50
+  batch_size: 4
+  learning_rate: 0.0001
+  
+  optimizer:
+    name: "adam"
+  
+  loss: "sparse_categorical_crossentropy"
+  
+  metrics:
+    - "sparse_categorical_accuracy"
+  
+  pipeline:
+    shuffle_buffer: 512
+    num_parallel_calls: 2
+    prefetch: 1
+    shuffle_seed: 42
+  
+  augmentation:
+    horizontal_flip: true
+    vertical_flip: true
+  
+  callbacks:
+    model_checkpoint:
+      enabled: true
+      monitor: "val_sparse_categorical_accuracy"
+      save_best_only: true
+      verbose: 1
+    
+    early_stopping:
+      enabled: true
+      monitor: "val_sparse_categorical_accuracy"
+      patience: 10
+      restore_best_weights: true
+      verbose: 1
+    
+    reduce_lr:
+      enabled: true
+      monitor: "val_sparse_categorical_accuracy"
+      factor: 0.5
+      patience: 5
+      min_lr: 0.0000001
+      verbose: 1
+    
+    csv_logger:
+      enabled: true
+      append: false
+
+gpu:
+  memory_growth: true
+  allocator: "cuda_malloc_async"
+  mixed_precision:
+    enabled: true
+    policy: "mixed_float16"
+
+evaluation:
+  batch_size: 4
+  confusion_matrix_samples: 20
+  export:
+    per_image_csv: true
+    readable_csv: true
+    summary_csv: true
+
+visualization:
+  activations:
+    enabled: true
+    num_samples: 3
+    dpi: 150
+  
+  kernels:
+    enabled: true
+    dpi: 150
+  
+  plots:
+    enabled: true
+    dpi: 300
+    formats: ["png", "pdf"]
+    smooth_window: 3
+    style: "seaborn-v0_8-darkgrid"
+
+paths:
+  output_dir: "outputs"
+  checkpoint_dir: "checkpoints"
+  best_model: "best_model.h5"
+  history_csv: "training_history.csv"
+  activations_dir: "activations_samples"
+  kernels_dir: "kernels"
+  analysis_dir: "analysis"
+  eval_per_image_csv: "per_image_centroids.csv"
+  eval_readable_csv: "intermediate_eval_readable.csv"
+  eval_summary_csv: "intermediate_eval_group_summary.csv"
+  eval_predictions_csv: "eval_samples_predictions.csv"
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

@@ -126,7 +126,7 @@ def load_input(path: str | Path, hdu: int | str = 0) -> Cube:
     path = Path(path)
     name = path.name.lower()
 
-    if name.endswith(".fits") or name.endswith(".fits.gz"):
+    if name.endswith((".fits", ".fits.gz")):
         return Cube.read(path, hdu=hdu)
 
     if hdu != 0:

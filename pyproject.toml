@@ -29,15 +29,19 @@ dependencies = [
     "torch>=2.1",
     "torchvision>=0.16",
     "huggingface_hub>=0.25",
+    "rich>=13",
 ]
 
 [project.urls]
-Homepage = "https://github.com/wbandabarragan/cnn-turbulence"
-Documentation = "https://github.com/wbandabarragan/cnn-turbulence/tree/main/docs/turbulens"
+Homepage = "https://github.com/cPhysPlus/turbulens"
+Documentation = "https://github.com/cPhysPlus/turbulens/tree/main/docs"
+Source = "https://github.com/cPhysPlus/turbulens"
+"Pretrained models" = "https://huggingface.co/cPhysPlus/turbulens-ensembles"
 
 [project.optional-dependencies]
 test = ["pytest>=7"]
 image = ["pillow>=10"]
+plot = ["matplotlib>=3.7"]
 training = ["h5py>=3.8", "matplotlib>=3.7", "PyYAML>=6.0", "scikit-learn>=1.3", "tqdm>=4.65", "threadpoolctl>=3.1"]
 docs = ["sphinx>=7.2", "numpydoc>=1.6", "sphinx-argparse>=0.4", "pydata-sphinx-theme>=0.15", "sphinxcontrib-bibtex>=2.6"]
 notebooks = ["pandas>=2.3.3", "plotly>=7.0.0", "nbformat>=5.11.1"]
@@ -58,3 +62,12 @@ testpaths = ["turbulens"]
 # import ...`), matching how it's invoked as a script directory (`cd turbulens/training && python
 # pipeline.py`); this makes those same flat imports resolve for turbulens/training/tests/ under pytest.
 pythonpath = ["turbulens/training"]
+
+[tool.ruff]
+line-length = 120
+extend-exclude = ["turbulens/training"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+# Long lines are mostly docstrings and messages; line length is not enforced.
+ignore = ["E501"]

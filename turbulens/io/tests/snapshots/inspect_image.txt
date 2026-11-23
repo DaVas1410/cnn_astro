@@ -1,0 +1,20 @@
+Data                                                        
+                                                            
+ Source          synthetic.npy                              
+ Shape           1 x 128 x 128  (channels x height x width) 
+ Unit            -                                          
+ Spectral axis   none (already-projected image)             
+                                                            
+Pixel statistics                                   
+╭────────┬───────┬─────────┬───────┬──────────────╮
+│    Min │   Max │    Mean │   Std │ NaN fraction │
+├────────┼───────┼─────────┼───────┼──────────────┤
+│ -1.658 │ 1.354 │ -0.1891 │ 0.406 │        0.00% │
+╰────────┴───────┴─────────┴───────┴──────────────╯
+Classical FFT estimates                                                      
+╭───────────┬───────┬───────┬───────┬────────┬──────────────────────────────╮
+│ Method    │ k_min │ k_max │     α │     R² │ Appropriate for              │
+├───────────┼───────┼───────┼───────┼────────┼──────────────────────────────┤
+│ Band edge │     7 │    57 │     - │      - │ synthetic, band-limited data │
+│ Power law │    24 │    28 │ 7.409 │ 0.2619 │ ⚠ poor fit, not meaningful   │
+╰───────────┴───────┴───────┴───────┴────────┴──────────────────────────────╯

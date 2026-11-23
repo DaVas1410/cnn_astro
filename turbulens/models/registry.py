@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import NamedTuple
 
 from huggingface_hub import snapshot_download
 from huggingface_hub.errors import HfHubHTTPError, LocalEntryNotFoundError, RepositoryNotFoundError
 
-DEFAULT_HUB_REPO = "Davas1410/turbulens-ensembles"
+DEFAULT_HUB_REPO = "cPhysPlus/turbulens-ensembles"
 """str: Hugging Face model repository holding the published pretrained ensembles."""
 
 
@@ -204,11 +205,7 @@ class EnsembleRegistry:
                 snapshot_download(repo_id, repo_type="model", revision=revision, allow_patterns=[pattern])
             )
         except LocalEntryNotFoundError as exc:
-            raise FileNotFoundError(
-                f"Ensemble {mode!r} from {repo_id} is not in the local cache and could not be "
-                "downloaded (offline?). Run 'turbulens download' once on a machine with network "
-                f"access to cache it. ({exc})"
-            ) from exc
+            raise FileNotFoundError(_offline_message(mode, target, repo_id, exc)) from exc
         except RepositoryNotFoundError as exc:
             raise FileNotFoundError(
                 f"Hugging Face repository {repo_id!r} not found. If it is private, log in with "
@@ -218,3 +215,28 @@ class EnsembleRegistry:
             raise FileNotFoundError(f"Could not download ensemble {mode!r} from {repo_id}: {exc}") from exc
         members_dir = EnsembleRegistry.resolve(snapshot, target=target, version=version)
         return FetchedEnsemble(members_dir=members_dir, repo_id=repo_id, revision=snapshot.name)
+
+
+_MISSING_FILES = re.compile(r"(\d+) file\(s\) are missing \((.+?)\)\. (?:The Hub|Outgoing)")
+
+
+def _offline_message(mode: str, target: str | None, repo_id: str, exc: Exception) -> str:
+    """
+    A multi-line explanation for an ensemble that is neither cached nor downloadable.
+
+    The cause, the missing files (the first three plus a count, when the
+    Hugging Face error lists them, as it does for a partly cached
+    snapshot) and the command that fixes it, each on its own line.
+    """
+    lines = [f"Ensemble {mode!r} from {repo_id} is not fully cached, and the Hub could not be reached (offline?)."]
+    match = _MISSING_FILES.search(str(exc))
+    if match:
+        count = int(match.group(1))
+        names = [name for name in match.group(2).split(", ") if not name.startswith("...")]
+        lines.append(f"  Missing {count} file{'s' if count != 1 else ''}:")
+        lines += [f"    {name}" for name in names]
+        if count > len(names):
+            lines.append(f"    ... and {count - len(names)} more")
+    command = "turbulens download" + (f" --target {target}" if target else "")
+    lines.append(f"  Fix: run `{command}` once with network access, then retry.")
+    return "\n".join(lines)

@@ -41,10 +41,11 @@ Real observations
 - **Velocity structure and optical depth.** Channel maps are shaped by
   velocity fluctuations; optically thick or self-absorbed gas breaks the
   link between intensity and column density (:ref:`projection-and-slices`).
-- **Normalization assumption.** Real maps are log-transformed and
-  shifted onto the training scale but not rescaled. The predicted
-  :math:`\sigma` therefore assumes the log-intensity contrast of the map
-  is comparable to the log-density contrast of the training fields
+- **Normalization assumption.** Real maps are divided by their mean and
+  log-transformed, but not rescaled. The predicted :math:`\sigma`
+  therefore assumes the map's intensity behaves like a unit-mean density
+  field, so that its log-intensity contrast is comparable to the
+  log-density contrast of the training fields
   (:ref:`real-data normalization <real-data-normalization>`).
 - **Image size.** Inputs are not resized; the models were trained on
   :math:`128 \times 128` images, and their notion of scale is tied to

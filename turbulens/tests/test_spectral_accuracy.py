@@ -8,7 +8,7 @@ locally generated), so these tests skip cleanly when it is absent
 rather than failing CI or a fresh checkout.
 
 To re-tune the estimator's parameters against this or other labeled
-data, see ``archive/scripts/tune_band_edges.py``.
+data, see ``archive/data_generation/scripts/tune_band_edges.py``.
 """
 from __future__ import annotations
 
@@ -78,11 +78,11 @@ def test_estimate_band_edges_kmax_mae_within_two_pixels():
     assert np.mean(np.abs(k_max_true - k_max_pred)) < 2.0
 
 
-def test_estimate_band_edges_never_returns_nan_on_real_labeled_images():
+def test_estimate_band_edges_never_returns_none_on_real_labeled_images():
     # Every image in this dataset is genuinely band-limited by construction (pyFC), so
     # the estimator -- built for exactly this kind of image -- should always find an edge.
     images, _, _ = _load_sample(n_sample=300)
 
-    n_nan = sum(1 for image in images if np.isnan(estimate_band_edges(image)["k_min"]))
+    n_missing = sum(1 for image in images if estimate_band_edges(image)["k_min"] is None)
 
-    assert n_nan == 0
+    assert n_missing == 0

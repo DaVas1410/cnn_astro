@@ -10,11 +10,13 @@ tags:
 library_name: pytorch
 ---
 
+<p align="center"><img src="logo.png" alt="turbulens logo" width="140"></p>
+
 # turbulens: fractal-turbulence parameter ensembles
 
 Five deep-ensemble PyTorch models that predict fractal-turbulence parameters — `k_min`, `k_max`,
 `sigma`, `beta` — from a 2D radio-astronomy image (a projected HI cube, or a synthetic log-normal
-fractal density slice). Use them with the [`turbulens`](https://github.com/wbandabarragan/cnn-turbulence)
+fractal density slice). Use them with the [`turbulens`](https://github.com/cPhysPlus/turbulens)
 Python package's `turbulens infer` CLI or `turbulens.inference.Inferencer` API — this repo is weights
 only, not a standalone inference script.
 
@@ -40,7 +42,7 @@ this repo can be used directly as `--output-root`.
 ## Use
 
 ```bash
-pip install "turbulens[image] @ git+https://github.com/wbandabarragan/cnn-turbulence.git"
+pip install "turbulens[image] @ git+https://github.com/cPhysPlus/turbulens.git"
 hf download <MODEL_REPO_ID> --local-dir ./turbulens-ensembles
 
 # Synthetic image (already on the training log-density scale)
@@ -92,7 +94,7 @@ are shipped rather than one being deprecated in favor of the other.
   (`nn.SmoothL1Loss`), not a variance-head/NLL model; all reported uncertainty is ensemble
   (epistemic) spread only.
 - **Trained entirely on synthetic pyFC data.** Applying to real telescope data (e.g. GASS HI survey)
-  requires `--real-data`, which recenters onto the training scale — it does not correct for any other
+  requires `--real-data`, which divides the map by its mean and log-transforms it, like the unit-mean training fields — it does not correct for any other
   real-vs-synthetic distribution shift (beam effects, noise properties, non-log-normal density
   statistics, etc.). `Inferencer.predict` warns when >5% of input pixels hit the normalization clip
   boundary, a signal of likely out-of-distribution input.

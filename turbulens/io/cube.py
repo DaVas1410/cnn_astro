@@ -96,7 +96,7 @@ class Cube(NDDataRef):
         super().__init__(data, *args, **kwargs)
 
     @classmethod
-    def read(cls, path: str | Path, hdu: int | str = 0, memmap: bool = True) -> "Cube":
+    def read(cls, path: str | Path, hdu: int | str = 0, memmap: bool = True) -> Cube:
         """
         Read a FITS file into a `Cube`, promoting a 2D image to a single-channel cube.
 
@@ -198,7 +198,7 @@ class Cube(NDDataRef):
         unit=None,
         wcs: WCS | None = None,
         meta=None,
-    ) -> "Cube":
+    ) -> Cube:
         """
         Build a `Cube` directly from an in-memory array.
 
@@ -340,7 +340,7 @@ class Cube(NDDataRef):
         velocities = native_values.to(u.km / u.s, equivalencies=u.doppler_radio(rest))
         return SpectralCoord(velocities, doppler_rest=rest, doppler_convention="radio")
 
-    def slice_channel(self, index: int) -> "Cube":
+    def slice_channel(self, index: int) -> Cube:
         """
         Return a new 2D `Cube` holding a single channel.
 
@@ -366,7 +366,7 @@ class Cube(NDDataRef):
         meta = self.meta.copy() if self.meta is not None else None
         return Cube(data=self.data[index], wcs=wcs, unit=self.unit, meta=meta)
 
-    def project(self, low: int, high: int, mode: str = "sum") -> "Cube":
+    def project(self, low: int, high: int, mode: str = "sum") -> Cube:
         """
         Collapse channels ``[low, high)`` into a 2D `Cube`.
 
@@ -414,7 +414,7 @@ class Cube(NDDataRef):
 
     def project_velocity(
         self, v_low: u.Quantity, v_high: u.Quantity, mode: str = "sum"
-    ) -> "Cube":
+    ) -> Cube:
         """
         Project the channel range whose `velocity_axis` falls within ``[v_low, v_high]``.
 

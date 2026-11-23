@@ -18,8 +18,17 @@ and target:
 ``value``
    The ensemble mean (:eq:`eq-ensemble`), or the classical estimate.
 ``epistemic_std``
-   The ensemble spread (:ref:`uncertainty`); ``nan`` for the classical
+   The ensemble spread (:ref:`uncertainty`); masked for the classical
    methods, which have no ensemble.
+
+No column ever holds ``nan``. A value that was not computed (a classical
+estimate that found no edge, or the classical methods' uncertainty) is
+a masked cell: it prints as ``-`` in the terminal and is written as an
+empty cell in ``.ecsv``/``.csv``, which ECSV reads back as masked. FITS
+can only store a missing float as ``NaN``, so writing such a table to
+``.fits`` warns and recommends ``.ecsv``. In the terminal, a CNN value
+and its spread are rounded together: the spread to two significant
+figures and the value to the same decimal place.
 
 Metadata
 --------
@@ -41,7 +50,10 @@ The table's metadata records how it was produced:
    * - ``turbulens_version``
      - The installed `turbulens` version.
    * - ``model``
-     - CNN only: the local ``ensemble/members`` directory used.
+     - CNN only: the ensemble's name, ``<mode>/<version>`` (e.g.
+       ``multitask/local_v2``) for a Hugging Face or ``--output-root``
+       ensemble, otherwise the final folder name of ``--model``. Never an
+       absolute path, so shared results do not reveal local folders.
    * - ``model_repo``, ``model_revision``
      - CNN with a Hugging Face download only: the repository and the
        exact commit hash of the weights.

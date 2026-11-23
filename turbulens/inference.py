@@ -7,8 +7,9 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from astropy.table import QTable
+from astropy.table import MaskedColumn, QTable
 
+from turbulens._warnings import ClippedPixelsWarning
 from turbulens.models.checkpoint import (
     denormalize_targets,
     load_member,
@@ -69,6 +70,35 @@ class Inferencer:
         for member in self._members:
             member.model.to(self.device)
 
+    def clipped_pixels(self, image: np.ndarray, real_data: bool = False) -> np.ndarray:
+        """
+        Mark the pixels of one image that hit the normalization clip boundary.
+
+        Parameters
+        ----------
+        image : numpy.ndarray
+            A single 2D image of shape ``(H, W)``.
+        real_data : bool, optional
+            As in `predict`. Default `False`.
+
+        Returns
+        -------
+        numpy.ndarray
+            Boolean ``(H, W)`` mask, `True` where any member's scaled
+            pixel lands on or outside ``[0, 1]``, by the same rule as
+            `turbulens.models.checkpoint.preprocess_image`. Its mean is at
+            least ``meta["clipped_pixel_fraction_max"]`` of `predict`.
+        """
+        mask = np.zeros(image.shape, dtype=bool)
+        for member in self._members:
+            pixels, normalization = image, member.normalization
+            if real_data:
+                pixels, normalization = real_observation_normalization(image, member.normalization)
+            cleaned = np.where(np.isfinite(pixels), pixels, normalization.lower_value)
+            scaled = (cleaned - normalization.lower_value) / normalization.value_range
+            mask |= (scaled <= 0.0) | (scaled >= 1.0)
+        return mask
+
     def predict(self, images: np.ndarray, real_data: bool = False) -> QTable:
         """
         Predict physical targets for one image or a batch of images.
@@ -89,13 +119,11 @@ class Inferencer:
             ``log10(density)``, percentile-normalized from the whole
             training set; a real image is on a completely different linear
             scale, so reusing those training-time stats clips essentially
-            every pixel. When `True`, each image is instead log10-transformed
-            and shifted (per image) so its own central value lands on the
-            member's training-time central value, reusing the member's
-            fixed training-time scale rather than deriving a new one from
-            the image itself (see
-            `turbulens.models.checkpoint.real_observation_normalization`
-            for why re-deriving the scale per image would corrupt `sigma`).
+            every pixel. When `True`, each image is instead divided by its
+            own mean and log10-transformed, matching the unit-mean training
+            fields, and the member's fixed training-time scale is reused
+            rather than deriving a new one from the image itself (see
+            `turbulens.models.checkpoint.real_observation_normalization`).
             This does not address the deeper mismatch between synthetic
             2D log-normal training fields and real projected observations
             (see the "Interpreting Results" page of the documentation), so
@@ -109,7 +137,8 @@ class Inferencer:
             One row per ``(image, target)`` pair, with columns
             ``image_index``, ``target``, ``value`` (ensemble mean, in
             physical units), and ``epistemic_std`` (ensemble standard
-            deviation, ``ddof=1``). ``table.meta`` holds
+            deviation, ``ddof=1``), both masked (never ``nan``) where not
+            finite. ``table.meta`` holds
             ``clipped_pixel_fraction_max`` and ``n_members``.
 
         Raises
@@ -156,11 +185,11 @@ class Inferencer:
             processed = []
             for image in images:
                 if real_data:
-                    recentered_image, normalization = real_observation_normalization(
+                    normalized_image, normalization = real_observation_normalization(
                         image, member.normalization,
                     )
                     stacked, clipped_fraction = preprocess_image(
-                        recentered_image, normalization, member.model.in_channels, member.input_standardization,
+                        normalized_image, normalization, member.model.in_channels, member.input_standardization,
                     )
                 else:
                     stacked, clipped_fraction = preprocess_image(
@@ -192,8 +221,11 @@ class Inferencer:
         table = QTable()
         table["image_index"] = image_indices
         table["target"] = target_names
-        table["value"] = values
-        table["epistemic_std"] = epistemic_stds
+        # Never store nan: a non-finite member output (not expected after the clamped
+        # denormalization, but possible from a degenerate input) is masked instead.
+        values, epistemic_stds = np.array(values), np.array(epistemic_stds)
+        table["value"] = MaskedColumn(values, mask=~np.isfinite(values))
+        table["epistemic_std"] = MaskedColumn(epistemic_stds, mask=~np.isfinite(values) | ~np.isfinite(epistemic_stds))
 
         clipped_fraction_max = float(max(clipped_fractions)) if clipped_fractions else 0.0
         table.meta["clipped_pixel_fraction_max"] = clipped_fraction_max
@@ -202,6 +234,7 @@ class Inferencer:
             warnings.warn(
                 f"{clipped_fraction_max:.1%} of pixels hit the normalization clip boundary; "
                 "input may be out of the training distribution.",
+                ClippedPixelsWarning,
                 stacklevel=2,
             )
         return table

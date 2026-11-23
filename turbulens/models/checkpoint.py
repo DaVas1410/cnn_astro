@@ -13,9 +13,9 @@ wrong predictions rather than an error.
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Mapping, Sequence
 
 import numpy as np
 import torch
@@ -255,7 +255,7 @@ def real_observation_normalization(
     member_normalization: NormalizationStats,
 ) -> tuple[np.ndarray, NormalizationStats]:
     """
-    Log10-transform a real observation and recenter it onto a member's training scale.
+    Normalize a real observation to unit mean and log10-transform it, on a member's training scale.
 
     Training images are ``log10(density)`` of synthetic 2D log-normal
     fractal fields generated with pyFC, then percentile-normalized
@@ -267,28 +267,16 @@ def real_observation_normalization(
     pixel (see `turbulens.inference.Inferencer.predict`'s out-of-distribution
     warning).
 
-    This function corrects only the part of that mismatch that legitimately
-    varies image to image: log10-transforms the image, then **shifts** it
-    (an additive constant, computed fresh per image) so its own robust
-    central value lands on `member_normalization`'s central value. It does
-    **not** rescale the image's own spread to fill ``[0, 1]``, unlike a naive
-    per-image percentile normalization. That distinction matters because the
-    trained model's `sigma` head reads the pixel-value spread of the
-    normalized image as its cue for `sigma` (the log-normal field's
-    single-point standard deviation, by definition how wide that spread is);
-    since every synthetic training image shares the same fixed density
-    scale (the generator fixes the mean density at 1) and only `sigma` moves
-    its width, `member_normalization`'s ``lower_value``/``upper_value`` (fit
-    once, across many training images) is exactly the width scale the model
-    learned to interpret. Re-deriving that width from a single real image,
-    as an earlier version of this function did, stretches every image to
-    the same apparent contrast regardless of its true spread, actively
-    erasing the amplitude signal `sigma` depends on -- observed in practice
-    as wildly unstable ensemble disagreement on `sigma` for some real
-    cubes and not others.
-    Recentering only, and reusing the member's fixed width, keeps real
-    images with different true amplitudes comparably positioned to how
-    the model saw amplitude differences during training.
+    The generator fixes the mean density of every training field at 1, so
+    each training image is ``log10(rho)`` with ``<rho> = 1``. This function
+    puts a real map on the same footing: it divides the image by its own
+    mean and takes ``log10``. That removes the map's arbitrary units and
+    calibration while keeping both properties of a training image the model
+    reads `sigma` from: the spread of the log values (the field's contrast)
+    and their absolute level (for a log-normal field with unit mean,
+    ``<ln rho> = -sigma_s**2 / 2``, so the level itself depends on `sigma`).
+    The image's spread is not rescaled, and `member_normalization`'s fixed
+    ``lower_value``/``upper_value`` are reused unchanged.
 
     Parameters
     ----------
@@ -299,42 +287,34 @@ def real_observation_normalization(
         The ensemble member's own training-time normalization stats
         (`turbulens.models.checkpoint.Member.normalization`). Its
         ``lower_value``/``upper_value``/``value_range`` are reused
-        unchanged; only a per-image location shift is computed here.
+        unchanged.
 
     Returns
     -------
-    recentered_image : numpy.ndarray
-        The log10-transformed, per-image-recentered image, ready to pass to
-        `preprocess_image` together with `stats`.
+    normalized_image : numpy.ndarray
+        ``log10(image / mean(image))``, ready to pass to `preprocess_image`
+        together with `stats`.
     stats : NormalizationStats
         `member_normalization` with `source` and `finite_pixels_examined`
-        updated to describe this recentering; `lower_value`/`upper_value`/
+        updated to describe this normalization; `lower_value`/`upper_value`/
         `value_range` are identical to `member_normalization`'s.
 
     Notes
     -----
-    Non-positive pixels (instrumental noise dipping below zero, or an
-    all-zero border) have no finite log10 and are floored to the image's own
-    smallest positive value before the log10 transform, rather than to an
-    arbitrary global constant, since real-image intensity scales vary by
-    orders of magnitude across surveys and targets.
+    Non-positive pixels (instrumental noise dipping below zero, absorption,
+    or an all-zero border) have no finite log10 and are floored to the
+    image's own smallest positive value before the mean and the log10 are
+    taken, rather than to an arbitrary global constant, since real-image
+    intensity scales vary by orders of magnitude across surveys and targets.
 
-    The per-image location is estimated as the midpoint of the image's own
-    `member_normalization.lower_percentile`/`upper_percentile` values (the
-    same percentiles used for the reused width), a robust center that
-    doesn't require assuming anything about the image's absolute units.
+    The result is invariant to the map's units: multiplying the input by
+    any positive constant leaves it unchanged.
     """
-    image = np.asarray(image, dtype=np.float32)
+    image = np.asarray(image, dtype=np.float64)
     positive = image[image > 0]
-    floor = float(positive.min()) if positive.size else np.finfo(np.float32).tiny
-    log_image = np.log10(np.where(image > 0, image, floor).astype(np.float32))
-
-    finite = log_image[np.isfinite(log_image)]
-    image_lower = np.percentile(finite, member_normalization.lower_percentile)
-    image_upper = np.percentile(finite, member_normalization.upper_percentile)
-    image_center = (image_lower + image_upper) / 2.0
-    training_center = (member_normalization.lower_value + member_normalization.upper_value) / 2.0
-    recentered_image = log_image + (training_center - image_center)
+    floor = float(positive.min()) if positive.size else float(np.finfo(np.float32).tiny)
+    clean = np.where(image > 0, image, floor)
+    normalized_image = np.log10(clean / clean.mean()).astype(np.float32)
 
     stats = NormalizationStats(
         lower_percentile=member_normalization.lower_percentile,
@@ -342,12 +322,12 @@ def real_observation_normalization(
         lower_value=member_normalization.lower_value,
         upper_value=member_normalization.upper_value,
         value_range=member_normalization.value_range,
-        finite_pixels_examined=int(finite.size),
+        finite_pixels_examined=int(np.isfinite(normalized_image).sum()),
         images_examined=1,
         sampling_seed=-1,
-        source="real_observation_recentered_fixed_training_scale",
+        source="real_observation_unit_mean_fixed_training_scale",
     )
-    return recentered_image, stats
+    return normalized_image, stats
 
 
 def denormalize_targets(

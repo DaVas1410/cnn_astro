@@ -1,0 +1,9 @@
+Predictions                                                               
+╭───────────┬──────────────┬───┬─────────────────────────────────────────╮
+│ Parameter │   Value ± 1σ │   │ Description                             │
+├───────────┼──────────────┼───┼─────────────────────────────────────────┤
+│ k_min     │  1.38 ± 0.53 │ ✓ │ Lower band edge (cycles per image side) │
+│ k_max     │ 63.91 ± 0.16 │ ✓ │ Upper band edge (cycles per image side) │
+│ σ         │  4.14 ± 0.12 │ ✓ │ Std. dev. of linear density             │
+│ β         │ -2.53 ± 0.12 │ ✓ │ Spectral index                          │
+╰───────────┴──────────────┴───┴─────────────────────────────────────────╯

@@ -4,20 +4,17 @@ from __future__ import annotations
 
 import argparse
 import json
-from pathlib import Path
-
-from astropy import units as u
+import warnings
+from pathlib import Path, PurePath
+from typing import TYPE_CHECKING
 
 from turbulens import __version__
-from turbulens.inference import Inferencer
-from turbulens.io.breakdown import describe_cube
-from turbulens.io.cube import Cube
-from turbulens.io.image_loaders import load_input
-from turbulens.io.report import format_breakdown_cli, write_breakdown_html, write_breakdown_json
-from turbulens.io.results import write_results
-from turbulens.models.registry import EnsembleRegistry, FetchedEnsemble
-from turbulens.spectral import SpectralEstimator
 
+# Everything else is imported inside the command that needs it: PyTorch, astropy and scipy take seconds
+# to load, and `turbulens --version`, `--help` or a usage error should not wait for them.
+if TYPE_CHECKING:
+    from turbulens.io.cube import Cube
+    from turbulens.models.registry import FetchedEnsemble
 
 def build_parser() -> argparse.ArgumentParser:
     """
@@ -82,10 +79,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     infer.add_argument(
         "--real-data", action="store_true",
-        help="--method cnn only. Treat --input as a real (non-synthetic) observation: log10-transform, "
-        "then recenter onto the training set's own fixed-width normalization range (not the image's own "
-        "percentiles), since real intensities sit on a completely different linear scale than the "
-        "log-density training images. Strongly recommended for any real FITS/telescope input -- omitting "
+        help="--method cnn only. Treat --input as a real (non-synthetic) observation: divide by its mean "
+        "and log10-transform (like the unit-mean log-density training images), then use the training set's "
+        "own fixed-width normalization range, since real intensities sit on a completely different linear "
+        "scale than the training images. Strongly recommended for any real FITS/telescope input -- omitting "
         "it on real data silently produces confident-looking but meaningless predictions. See "
         "turbulens.models.checkpoint.real_observation_normalization.",
     )
@@ -101,6 +98,11 @@ def build_parser() -> argparse.ArgumentParser:
         "in the output table's metadata.",
     )
     infer.add_argument("--out", default=None, help="Output path (.ecsv recommended). Prints to stdout if omitted.")
+    infer.add_argument("--plot", default=None, metavar="PATH", help="Also save a diagnostic figure (the map and its power spectrum with the estimated k_min/k_max) to this path; the format follows the suffix (.png, .pdf, .svg). Needs matplotlib: pip install \"turbulens[plot]\".")
+    infer.add_argument(
+        "--verbose", action="store_true",
+        help="List every warning in full, including routine FITS header fixes (summarized by default).",
+    )
 
     inspect_parser = subparsers.add_parser(
         "inspect", help="Show a breakdown of a FITS cube or already-projected image."
@@ -111,7 +113,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     inspect_parser.add_argument("--json", default=None, help="Write the breakdown as JSON to this path.")
     inspect_parser.add_argument(
-        "--html", default=None, help="Write the breakdown as a minimal HTML report to this path."
+        "--html", default=None, help="Write the breakdown as a self-contained HTML report to this path."
+    )
+    inspect_parser.add_argument("--plot", default=None, metavar="PATH", help="Also save a diagnostic figure (the map and its power spectrum with the estimated k_min/k_max) to this path; the format follows the suffix (.png, .pdf, .svg). Needs matplotlib: pip install \"turbulens[plot]\".")
+    inspect_parser.add_argument(
+        "--verbose", action="store_true",
+        help="List every warning in full, including routine FITS header fixes (summarized by default).",
     )
 
     download = subparsers.add_parser(
@@ -137,7 +144,7 @@ def build_parser() -> argparse.ArgumentParser:
 _INFER_CONFIG_DEFAULTS = {
     "input": None, "hdu": None, "channel": None, "integrate": None, "velocity": None,
     "method": "cnn", "model": None, "target": None, "real_data": False,
-    "output_root": None, "revision": None, "out": None,
+    "output_root": None, "revision": None, "out": None, "verbose": False, "plot": None,
 }
 """dict: `infer` option names loadable from `--config`, mapped to their argparse defaults.
 
@@ -165,6 +172,7 @@ def _apply_config_file(args: argparse.Namespace, parser: argparse.ArgumentParser
 
 def _resolve_members_dir(args: argparse.Namespace, parser: argparse.ArgumentParser) -> Path | FetchedEnsemble:
     """Resolve `--model` to an ensemble members directory, or a Hub download for `--model auto`."""
+    from turbulens.models.registry import EnsembleRegistry
     if args.model != "auto":
         for flag, value in (("--target", args.target), ("--output-root", args.output_root), ("--revision", args.revision)):
             if value is not None:
@@ -194,36 +202,55 @@ def _validate_input_selection(args: argparse.Namespace, parser: argparse.Argumen
         parser.error(f"--channel, --integrate, and --velocity are mutually exclusive; got {', '.join(selected)}.")
 
 
-def run_infer(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
+def _run_summary(meta: dict) -> list[tuple[str, object]]:
+    """Label/value rows describing an `infer` run, from its results table's provenance `meta`."""
+    if meta.get("channel") is not None:
+        selection = f"channel {meta['channel']}"
+    elif meta.get("integrate") is not None:
+        low, high = meta["integrate"].split(":")
+        selection = f"channels {low} to {high}, integrated"
+    elif meta.get("velocity") is not None:
+        low, high = meta["velocity"]
+        selection = f"{low:g} to {high:g} km/s, integrated"
+    else:
+        selection = "single image"
+    rows = [("Input", meta.get("input_path")), ("Selection", selection), ("Method", meta.get("method"))]
+    if meta.get("method") == "cnn":
+        revision = meta.get("model_revision")
+        clipped = meta.get("clipped_pixel_fraction_max")
+        rows += [
+            ("Model", None if meta.get("model") is None else meta["model"].replace("/", " · ")),
+            *([("Hub revision", f"{meta['model_repo']}@{revision[:12]}")] if revision else []),
+            ("Members", meta.get("n_members")),
+            ("Normalization", "real observation" if meta.get("real_data") else "synthetic (training)"),
+            ("Clipped pixels", None if clipped is None else f"{clipped:.1%}"),
+        ]
+    return rows
+
+
+def _model_name(members_dir: Path) -> str:
     """
-    Run the ``infer`` subcommand: load input, select a channel, predict, write or print results.
+    The ensemble's name for run provenance, without any machine-specific path.
 
-    Parameters
-    ----------
-    args : argparse.Namespace
-        Parsed arguments from the ``infer`` subparser built by
-        `build_parser`.
-    parser : argparse.ArgumentParser
-        The top-level parser, used to call ``parser.error(...)`` for
-        user-facing validation failures (which exits with a usage
-        message rather than raising a traceback).
+    An ensemble in the training pipeline's layout
+    (``.../<mode>/<version>/ensemble/members``, as every Hub or
+    ``--output-root`` ensemble is) is named ``"<mode>/<version>"``, e.g.
+    ``"multitask/local_v2"``; any other ``--model`` directory by its final
+    path component. Never the absolute path, which would carry the user's
+    home folder into every shared results file.
+    """
+    parts = PurePath(members_dir).parts
+    if len(parts) >= 4 and parts[-2:] == ("ensemble", "members"):
+        return f"{parts[-4]}/{parts[-3]}"
+    return PurePath(members_dir).name
 
-    Notes
-    -----
-    ``--method fft-band``/``fft-powerlaw`` estimate k_min/k_max
-    classically from the image's Fourier power spectrum
-    (`turbulens.spectral.SpectralEstimator`) and do not need
-    ``--model``; ``--method cnn`` (the default) predicts via a trained
-    `turbulens.inference.Inferencer` ensemble and requires ``--model``.
 
-    Exactly one of ``--channel``, ``--integrate``, or ``--velocity`` is
-    required when the input has more than one channel, and none of them
-    is allowed when the input already has exactly one channel (i.e. is
-    already a projected image); see `_validate_input_selection`.
+def _infer_table(args: argparse.Namespace, parser: argparse.ArgumentParser):
+    """
+    Load, select, and predict for `run_infer`.
 
-    ``--config`` (see `_apply_config_file`) is applied first, filling in
-    any option not explicitly given as a flag, so every check below sees
-    the same merged `args` regardless of source.
+    Returns the results `QTable`, the 2D map the estimate was made from,
+    and the `Inferencer` used (`None` for a classical method).
     """
     _apply_config_file(args, parser)
     if args.input is None:
@@ -241,6 +268,16 @@ def run_infer(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None
                 f"{', '.join(ignored)} has no effect with --method {args.method} (no model is used); "
                 "drop it or switch to --method cnn."
             )
+    elif args.model is None:
+        parser.error("--model is required.")
+
+    # The arguments are valid: now load what this run needs (PyTorch only for --method cnn).
+    import numpy as np
+    from astropy import units as u
+
+    from turbulens.io.image_loaders import load_input
+    from turbulens.spectral import SpectralEstimator
+
     hdu = args.hdu if args.hdu is not None else 0
     try:
         cube = load_input(args.input, hdu=hdu)
@@ -275,6 +312,7 @@ def run_infer(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None
     if args.method in ("fft-band", "fft-powerlaw"):
         spectral_method = "band_edge" if args.method == "fft-band" else "power_law"
         table = SpectralEstimator(method=spectral_method).predict(image_cube.data)
+        inferencer = None
         table.meta.update({
             "input_path": args.input,
             "method": args.method,
@@ -284,12 +322,14 @@ def run_infer(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None
             "turbulens_version": __version__,
         })
     else:
-        if args.model is None:
-            parser.error("--model is required.")
+        from turbulens.inference import Inferencer
+        from turbulens.models.registry import FetchedEnsemble
+
         try:
             resolved = _resolve_members_dir(args, parser)
             members_dir = resolved.members_dir if isinstance(resolved, FetchedEnsemble) else resolved
-            table = Inferencer(members_dir).predict(image_cube.data, real_data=args.real_data)
+            inferencer = Inferencer(members_dir)
+            table = inferencer.predict(image_cube.data, real_data=args.real_data)
         except FileNotFoundError as exc:
             parser.error(str(exc))
         if isinstance(resolved, FetchedEnsemble):
@@ -297,7 +337,7 @@ def run_infer(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None
         table.meta.update({
             "input_path": args.input,
             "method": args.method,
-            "model": str(members_dir),
+            "model": _model_name(members_dir),
             "real_data": args.real_data,
             "channel": args.channel,
             "integrate": args.integrate,
@@ -305,10 +345,84 @@ def run_infer(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None
             "turbulens_version": __version__,
         })
 
+    return table, np.asarray(image_cube.data)[0], inferencer
+
+
+def run_infer(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
+    """
+    Run the ``infer`` subcommand: load input, select a channel, predict, print and optionally write results.
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Parsed arguments from the ``infer`` subparser built by
+        `build_parser`.
+    parser : argparse.ArgumentParser
+        The top-level parser, used to call ``parser.error(...)`` for
+        user-facing validation failures (which exits with a usage
+        message rather than raising a traceback).
+
+    Notes
+    -----
+    ``--method fft-band``/``fft-powerlaw`` estimate k_min/k_max
+    classically from the image's Fourier power spectrum
+    (`turbulens.spectral.SpectralEstimator`) and do not need
+    ``--model``; ``--method cnn`` (the default) predicts via a trained
+    `turbulens.inference.Inferencer` ensemble and requires ``--model``.
+
+    Exactly one of ``--channel``, ``--integrate``, or ``--velocity`` is
+    required when the input has more than one channel, and none of them
+    is allowed when the input already has exactly one channel (i.e. is
+    already a projected image); see `_validate_input_selection`.
+
+    ``--config`` (see `_apply_config_file`) is applied first, filling in
+    any option not explicitly given as a flag, so every check below sees
+    the same merged `args` regardless of source.
+
+    Warnings raised while loading and predicting (FITS header fixes,
+    out-of-distribution or grid-limit notices) are collected and printed
+    once, as a single panel on standard error, after the results.
+    """
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        table, image, inferencer = _infer_table(args, parser)  # validates the arguments before any heavy import
+
+        from turbulens._warnings import ClippedPixelsWarning
+        from turbulens.io.display import (
+            OUT_OF_RANGE_FRACTION,
+            file_written_text,
+            key_value_table,
+            make_console,
+            message_panels,
+            results_table,
+            results_written_text,
+            supports_unicode,
+        )
+        from turbulens.io.plot import edges_from_table
+        from turbulens.io.results import write_results
+
+        if args.out:
+            write_results(table, args.out)
+        if args.plot:
+            edges, fit = edges_from_table(table)
+            clipped = inferencer.clipped_pixels(image, real_data=args.real_data) if inferencer is not None else None
+            _save_plot(parser, image, args.plot, edges=edges, fit=fit, clipped=clipped,
+                       map_title="Map used for the estimate")
+
+    console = make_console()
+    console.print(key_value_table("Run", _run_summary(table.meta)))
+    is_fits = str(args.input).lower().endswith((".fits", ".fits.gz", ".fit", ".fts"))
+    suggest_real_data = args.method == "cnn" and is_fits and not args.real_data
+    console.print(results_table(table, unicode=supports_unicode(console), suggest_real_data=suggest_real_data))
     if args.out:
-        write_results(table, args.out)
-    else:
-        table.pprint(max_width=-1)
+        console.print(results_written_text(args.out, table))
+    if args.plot:
+        console.print(file_written_text("Plot written to", args.plot))
+    clipped = table.meta.get("clipped_pixel_fraction_max")
+    shown_in_table = (ClippedPixelsWarning,) if clipped is not None and clipped > OUT_OF_RANGE_FRACTION else ()
+    errors = make_console(stderr=True)
+    for panel in message_panels(caught, verbose=args.verbose, skip=shown_in_table):
+        errors.print(panel)
 
 
 def run_inspect(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
@@ -324,21 +438,53 @@ def run_inspect(args: argparse.Namespace, parser: argparse.ArgumentParser) -> No
         The top-level parser, used for `parser.error` on validation
         failures.
     """
+    import numpy as np
+
+    from turbulens.io.breakdown import describe_cube
+    from turbulens.io.display import file_written_text, make_console, message_panels, supports_unicode
+    from turbulens.io.image_loaders import load_input
+    from turbulens.io.report import breakdown_renderables, write_breakdown_html, write_breakdown_json
+    from turbulens.spectral import fit_inertial_range
     if args.input is None:
         parser.error("--input is required.")
     hdu = args.hdu if args.hdu is not None else 0
 
-    try:
-        cube = load_input(args.input, hdu=hdu)
-    except (FileNotFoundError, ValueError, OSError) as exc:
-        parser.error(str(exc))
-    breakdown = describe_cube(cube, source_path=str(args.input))
-    print(format_breakdown_cli(breakdown))
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        try:
+            cube = load_input(args.input, hdu=hdu)
+        except (FileNotFoundError, ValueError, OSError) as exc:
+            parser.error(str(exc))
+        breakdown = describe_cube(cube, source_path=str(args.input))
+        if args.plot:
+            data = np.asarray(cube.data, dtype=float)
+            image = data[0] if cube.n_channels == 1 else np.nansum(data, axis=0)
+            fit = breakdown.spectral_estimate_power_law or fit_inertial_range(image)
+            _save_plot(parser, image, args.plot, fit=fit,
+                       edges={name: (fit.get(name), None) for name in ("k_min", "k_max")},
+                       map_title="Input map" if cube.n_channels == 1 else "All channels summed")
+    console = make_console()
+    console.print(*breakdown_renderables(breakdown, unicode=supports_unicode(console)))
 
     if args.json:
         write_breakdown_json(breakdown, args.json)
     if args.html:
         write_breakdown_html(breakdown, args.html)
+    for flag, path in (("--json", args.json), ("--html", args.html), ("--plot", args.plot)):
+        if path:
+            console.print(file_written_text(f"{flag[2:].upper() if flag != '--plot' else 'Plot'} written to", path))
+    errors = make_console(stderr=True)
+    for panel in message_panels(caught, verbose=args.verbose):
+        errors.print(panel)
+
+
+def _save_plot(parser: argparse.ArgumentParser, image, path, **kwargs) -> None:
+    """Save the ``--plot`` figure, turning a missing matplotlib into a usage error."""
+    from turbulens.io.plot import diagnostic_figure
+    try:
+        diagnostic_figure(image, path, **kwargs)
+    except ImportError as exc:
+        parser.error(str(exc))
 
 
 def run_download(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
@@ -359,13 +505,26 @@ def run_download(args: argparse.Namespace, parser: argparse.ArgumentParser) -> N
     Each printed path is an ``ensemble/members`` directory that can also
     be passed to ``infer --model`` directly.
     """
+    from turbulens.io.display import make_console, titled_table
+    from turbulens.models.registry import EnsembleRegistry
     targets = [None, "k_min", "k_max", "sigma", "beta"] if args.all else [args.target]
+    downloaded = titled_table("Downloaded ensembles")
+    downloaded.add_column("Ensemble", style="value", no_wrap=True)
+    downloaded.add_column("Revision", no_wrap=True)
+    paths = []
     for target in targets:
         try:
             fetched = EnsembleRegistry.fetch(target=target, revision=args.revision)
         except FileNotFoundError as exc:
             parser.error(str(exc))
-        print(f"{target or 'multitask'}: {fetched.members_dir} ({fetched.repo_id}@{fetched.revision[:12]})")
+        downloaded.add_row(target or "multitask", f"{fetched.repo_id}@{fetched.revision[:12]}")
+        paths.append(f"  {target or 'multitask'}: {fetched.members_dir}")
+    console = make_console()
+    console.print(downloaded)
+    # Paths stay outside the table, unwrapped, so they can be copied whole into `infer --model`.
+    console.print("[title]Members directories[/title] [label](usable as --model)[/label]:")
+    for line in paths:
+        console.print(line, soft_wrap=True, markup=False)
 
 
 def main(argv: list[str] | None = None) -> None:

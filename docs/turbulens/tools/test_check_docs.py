@@ -23,7 +23,7 @@ def test_flags_private_paths():
     assert find_private_paths("outputs/comparison/local_v2")
     assert find_private_paths("see `src/dataset_generator.py`")
     assert find_private_paths("(`notebooks/turbulens_multitask_results.ipynb`)")
-    assert not find_private_paths("the HF repo Davas1410/turbulens-ensembles")
+    assert not find_private_paths("the HF repo cPhysPlus/turbulens-ensembles")
 
 
 def test_flags_bib_entries_without_identifier():

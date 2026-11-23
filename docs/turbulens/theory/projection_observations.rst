@@ -123,7 +123,7 @@ In turbulens
   proportional to the integrated intensity, and so to
   :math:`N_\mathrm{HI}` where the gas is optically thin. Constant factors
   such as the channel width do not matter, because the real-data
-  normalization removes the overall level (:ref:`real-data normalization <real-data-normalization>`).
+  normalization divides the map by its mean (:ref:`real-data normalization <real-data-normalization>`).
 - The CLI exposes these as ``--channel``, ``--integrate`` and
   ``--velocity`` (:doc:`/user_guide/cli`).
 - How beam smoothing, noise, finite fields of view and the

@@ -1,8 +1,17 @@
-# turbulens
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/turbulens/_static/header-dark.svg">
+    <img src="docs/turbulens/_static/header.svg" alt="turbulens: turbulence parameters from a single 2D map" width="640">
+  </picture>
+</p>
 
 Predicts fractal-turbulence parameters (`k_min`, `k_max`, `sigma`, `beta`) from a radio-astronomy
 FITS cube or a synthetic 2D image, using a pretrained deep-ensemble CNN, or classical spectral
 estimators that need no trained model at all.
+
+<p align="center">
+  <img src="docs/turbulens/_static/workflow.png" alt="turbulens workflow: a GASS HI cube is loaded, integrated over velocity, normalized onto the training scale and passed through a five-member deep ensemble that predicts k_min, k_max, sigma and beta with uncertainties; a classical power-law fit of the same map agrees" width="900">
+</p>
 
 ## Install
 
@@ -20,14 +29,33 @@ spectral estimator.
 **1. Inspect the file** (shape, WCS, velocity range, pixel stats):
 
 ```bash
-turbulens inspect --input huggingface/space/examples/gass_0_0_1774393774.fits.gz
+turbulens inspect --input examples/gass_0_0_1774393774.fits.gz
 ```
 
 ```
-Shape: (1201, 125, 125) (n_channels=1201)
-Unit: K
-Velocity range: -494.70 to 494.70 km/s (CTYPE=VOPT)
-Pixel stats: min=-11.9, max=148.4, mean=3.1, std=13.0, nan_fraction=0.0000
+Data
++----------------------------------------------------------------+
+| Source         | examples/gass_0_0_1774393774.fits.gz          |
+| Shape          | 1201 x 125 x 125  (channels x height x width) |
+| Unit           | K                                             |
+| Spectral axis  | VOPT                                          |
+| Velocity range | -494.70 to 494.70 km/s                        |
+| Rest frequency | -                                             |
++----------------------------------------------------------------+
+WCS
++-----------------------------------------+
+| Axis | CTYPE    |   CRVAL | Pixel scale |
+|------+----------+---------+-------------|
+|    1 | GLON-CAR |       0 |        0.08 |
+|    2 | GLAT-CAR |       0 |        0.08 |
+|    3 | VOPT     | -494700 |       824.5 |
++-----------------------------------------+
+Pixel statistics (K)
++-----------------------------------------------+
+|    Min |   Max |  Mean |   Std | NaN fraction |
+|--------+-------+-------+-------+--------------|
+| -11.92 | 148.4 | 3.131 | 12.99 |        0.00% |
++-----------------------------------------------+
 ```
 
 **2. Integrate the full velocity range into one 2D image and predict `k_min`/`k_max`** with the
@@ -35,17 +63,20 @@ classical power-law estimator (appropriate for real data, which has a continuous
 than a sharp cutoff):
 
 ```bash
-turbulens infer --input huggingface/space/examples/gass_0_0_1774393774.fits.gz \
+turbulens infer --input examples/gass_0_0_1774393774.fits.gz \
     --integrate 0:1201 --method fft-powerlaw
 ```
 
 ```
-image_index   target        value        epistemic_std
------------ --------- ------------------ -------------
-          0     k_min                2.0           nan
-          0     k_max               61.0           nan
-          0     alpha -4.023437648868689           nan
-          0 r_squared 0.9959089502469131           nan
+Predictions
++----------------------------------------------------------------------------+
+| Parameter |  Value | +/- (1 std) | Description                             |
+|-----------+--------+-------------+-----------------------------------------|
+| k_min     |      2 |           - | Lower band edge (cycles per image side) |
+| k_max     |     61 |           - | Upper band edge (cycles per image side) |
+| alpha     | -4.023 |           - | Fitted power-law slope                  |
+| r_squared | 0.9959 |           - | Fit R^2                                 |
++----------------------------------------------------------------------------+
 ```
 
 **3. Try your own file** the same way — FITS cube, or a plain PNG/TIFF/`.npy` image:
@@ -58,40 +89,38 @@ turbulens infer --input your_file.fits --integrate LOW:HIGH --method fft-powerla
 ### CNN inference (needs a pretrained ensemble)
 
 The classical estimator above needs no model; the CNN ensemble is more accurate but needs one.
-
-**If you have this repo's own `outputs/` locally** (the trained ensembles are git-ignored, not
-part of the git checkout, but present if you're on a machine where they were produced or synced),
-point `--output-root` straight at it:
-
-```bash
-turbulens infer --input your_file.fits --integrate LOW:HIGH --real-data \
-    --method cnn --model auto --output-root outputs
-```
-
-```
-image_index target        value           epistemic_std
------------ ------ ------------------- -------------------
-          0  k_min  1.3792097568511963  0.5257347226142883
-          0  k_max   63.90980911254883 0.15796305239200592
-          0  sigma    4.14192008972168  0.1170581504702568
-          0   beta -2.5287206172943115 0.12315365672111511
-```
-
-**Otherwise**, download the pretrained ensemble from the
-[`tutor-ensemble-v1` release](https://github.com/wbandabarragan/cnn-turbulence/releases/tag/tutor-ensemble-v1)
-(or train your own, see below), unzip it, and point `--output-root` at wherever it landed:
+`--model auto` downloads the pretrained multitask ensemble from the
+[`cPhysPlus/turbulens-ensembles`](https://huggingface.co/cPhysPlus/turbulens-ensembles) Hugging Face
+repo on first use and caches it:
 
 ```bash
-unzip turbulens-tutor-ensemble.zip -d turbulens-ensemble
-turbulens infer --input your_file.fits --integrate LOW:HIGH --real-data \
-    --method cnn --model auto --output-root turbulens-ensemble
+turbulens infer --input examples/gass_0_0_1774393774.fits.gz \
+    --integrate 0:1201 --real-data --method cnn --model auto
 ```
 
-Either way, `--model auto` finds the ensemble under `--output-root` automatically (newest version
-of the multitask ensemble); add `--target {k_min,k_max,sigma,beta}` to use that target's dedicated
-single-target ensemble instead, if one is available under the same root.
+```
+Predictions
++---------------------------------------------------------------------------+
+| Parameter | Value | +/- (1 std) | Description                             |
+|-----------+-------+-------------+-----------------------------------------|
+| k_min     |  1.05 |        0.07 | Lower band edge (cycles per image side) |
+| k_max     | 63.92 |        0.19 | Upper band edge (cycles per image side) |
+| sigma     |  0.73 |        0.05 | Std. dev. of linear density             |
+| beta      | -2.49 |        0.05 | Spectral index                          |
++---------------------------------------------------------------------------+
+```
 
-`--real-data` is required for real telescope data (recenters onto the training scale) — see
+On this cube the CNN's band edges and the classical power-law inertial range agree:
+
+![Integrated GASS HI map and its power spectrum, with the CNN k_min/k_max and the power-law inertial range](docs/turbulens/_static/gass_example.png)
+
+(Regenerate with `python docs/turbulens/tools/make_readme_figure.py --out docs/turbulens/_static/gass_example.png`.)
+
+Add `--target {k_min,k_max,sigma,beta}` to use that target's dedicated single-target ensemble
+instead, `turbulens download` to fetch ensembles ahead of time (e.g. for offline compute nodes), or
+`--output-root <dir>` to use an ensemble you trained yourself (newest version under that root).
+
+`--real-data` is required for real telescope data (divides the map by its mean and log-transforms it, like the unit-mean training fields) — see
 `turbulens infer --help` for why, and [`turbulens/README.md`](turbulens/README.md) for the full
 quickstart. Full docs (physical background, CLI reference, API) are in
 [`docs/turbulens/`](docs/turbulens/index.rst).
@@ -102,14 +131,13 @@ quickstart. Full docs (physical background, CLI reference, API) are in
 turbulens/            # the package itself -- CLI (`turbulens infer`/`inspect`), inference, models,
                        # io, spectral estimators, and turbulens/training/ (the ensemble training pipeline)
 docs/turbulens/        # turbulens' own Sphinx docs (source for the above)
-huggingface/           # model card, dataset card, and Gradio Space for the HF releases
+huggingface/           # model card, dataset card, and publish script for the HF releases
                        # (see huggingface/PUBLISHING.md)
+examples/              # four real GASS HI cubes to try turbulens on
 notebooks/             # the two active notebooks -- see notebooks/NOTEBOOKS.md
 data/, outputs/         # local datasets and trained ensemble checkpoints (git-ignored, large)
-archive/               # everything superseded: the legacy pyFC dataset-generation pipeline
-                       # (src/, scripts/, configs/, tests/), earlier notebook experiments,
-                       # observational-image originals, and unpublished paper/thesis drafts.
-                       # Not needed to use or develop turbulens -- kept for provenance only.
+archive/               # earlier project stages (v0_ ... v4_), the pyFC dataset generator
+                       # (data_generation/) and the GASS FITS originals. See archive/README.md.
 ```
 
 ## Training your own ensemble
@@ -122,6 +150,6 @@ archive/               # everything superseded: the legacy pyFC dataset-generati
 
 This started as a broader research repo (synthetic dataset generation, multiple modeling
 frameworks, per-target experiment notebooks) before converging on `turbulens` as the packaged,
-production system. That history lives in `archive/` rather than in the working tree — see
-`archive/docs/RESEARCH_JOURNEY.md` for the full narrative of how the project got here (model
-iterations, a `k_max` labeling-bug fix, uncertainty methods).
+production system. That history lives in `archive/`, one folder per stage. Each stage also has a git tag
+(`v0-classification` through `v5-turbulens`) marking the last commit where the repo looked like
+that stage.

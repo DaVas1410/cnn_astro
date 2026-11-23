@@ -49,6 +49,19 @@ outside the range, especially if all members agree on it.
 **Large spread.** A large ``epistemic_std`` means the members disagree
 and the input is ambiguous or unfamiliar to them.
 
+**The quality column.** The terminal's Predictions table flags each row:
+``✓`` when nothing stands out; ``⚠ spread ≥ value`` when the spread is at
+least as large as the value itself; ``⚠ poor fit`` for a power-law fit
+(and the values read from it) whose coefficient of determination is
+below ``turbulens.io.display.POOR_FIT_R_SQUARED``; and ``✗ out of
+range`` when more than half of the pixels clipped, in which case the
+whole table turns red and its caption says so (and, for a FITS input run
+without ``--real-data``, asks whether it was meant). The flags only
+summarize the checks above; the results file holds the numbers they come
+from. ``--plot PATH`` saves the map with its clipped pixels and its power
+spectrum with the estimated band edges, for a visual check (needs
+``pip install "turbulens[plot]"``).
+
 **Small spread is not confirmation.** Ensemble spread tends to be too
 small on inputs unlike the training data (:ref:`uncertainty`). Members
 can agree closely on a wrong answer.
@@ -93,9 +106,8 @@ What each parameter means on real data
 :math:`\sigma`
    The standard deviation of the linear density of a log-normal field
    with unit mean (:ref:`the four parameters <pyfc-parameters>`). On a real map it measures the
-   contrast of the *log-intensity* map against what the model learned,
-   because the real-data normalization keeps contrast and discards only
-   the overall level. Turning it into a Mach number needs the
+   contrast of the map divided by its mean, because the real-data
+   normalization keeps contrast and discards only the units. Turning it into a Mach number needs the
    assumptions of :eq:`eq-sigma-mach` plus a correction for projection,
    which `turbulens` does not make.
 

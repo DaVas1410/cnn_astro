@@ -92,7 +92,7 @@ The training pipeline reads only ``images`` and the target labels; see
 
 **Getting the data and the generator.** The three files are published
 in the Hugging Face dataset repository
-``Davas1410/turbulens-synthetic-data``. Its ``generation/`` folder holds
+``cPhysPlus/turbulens-synthetic-data``. Its ``generation/`` folder holds
 the exact generation scripts together with the bundled copy of pyFC that
 enforces the :math:`k_\mathrm{max}` band limit. Upstream pyFC does not
 reproduce these images (:ref:`lognormal-fields`). At the time of writing

@@ -104,9 +104,6 @@ graphify-out/
 .superpowers/
 docs/superpowers/
 
-# Archive staging: superseded material kept on disk for reference, not tracked in git
-# (full history for anything that was tracked before this move is in earlier commits)
-/archive/
 
 # Local tooling config (machine-specific absolute paths)
 *.7z

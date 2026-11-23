@@ -1,0 +1,11 @@
+Run                                                          
+                                                             
+ Input            examples/gass_0_0_1774393774.fits.gz       
+ Selection        channels 0 to 1201, integrated             
+ Method           cnn                                        
+ Model            multitask · local_v2                       
+ Hub revision     cPhysPlus/turbulens-ensembles@a784ee297427 
+ Members          5                                          
+ Normalization    real observation                           
+ Clipped pixels   0.1%                                       
+                                                             

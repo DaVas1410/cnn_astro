@@ -14,8 +14,8 @@ name the Hugging Face repositories and, for the models, the exact
 revision recorded in your output table's ``model_revision``
 (:doc:`user_guide/outputs_provenance`):
 
-- models: ``Davas1410/turbulens-ensembles``
-- training data: ``Davas1410/turbulens-synthetic-data``
+- models: ``cPhysPlus/turbulens-ensembles``
+- training data: ``cPhysPlus/turbulens-synthetic-data``
 
 Please also cite the methods and software `turbulens` builds on that
 matter for your use, in particular pyFC :cite:p:`pyfc` and the

@@ -46,7 +46,7 @@ whole spectrum does not depend on where the true edge lies, unlike a
 fixed window at the highest wavenumbers. If an edge lands on the first
 or last available bin, the true edge may lie beyond the measurable range
 and a warning is issued. A spectrum with no bin above the thresholds
-(pure noise, a constant image) returns ``nan`` for both edges.
+(pure noise, a constant image) returns ``None`` for both edges.
 
 **Inertial-range fit (real images).** Fit a straight line,
 :math:`\log_{10} P = \alpha \log_{10} k + c`, by least squares over a
@@ -102,6 +102,7 @@ In turbulens
 - `turbulens.spectral.SpectralEstimator` wraps either one behind the same
   ``.predict()`` interface as `turbulens.inference.Inferencer`. It
   returns a table with ``k_min`` and ``k_max`` (plus ``alpha`` and
-  ``r_squared`` for the fit), with ``epistemic_std`` always ``nan``.
+  ``r_squared`` for the fit), with ``epistemic_std`` always masked
+  (shown as ``-``).
 - From the command line: ``turbulens infer --method fft-band`` or
   ``--method fft-powerlaw``. Neither needs ``--model``.

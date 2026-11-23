@@ -1,0 +1,282 @@
+# Fractal Classifier v0.1 - Default Configuration
+# This file contains all hyperparameters and settings for training and evaluation
+
+# Data configuration
+data:
+  # Path to HDF5 dataset file containing training data
+  h5_path: "fractal_dataset.h5"
+  # Path to intermediate k-value dataset for evaluation
+  h5_intermediate_path: "fractal_dataset_intermediate.h5"
+  # Input image dimensions (height, width, channels)
+  input_shape: [512, 512, 1]
+  # Number of classes (k-values: 2, 4, 8, 16, 32, 64)
+  num_classes: 6
+  # K-values used during training
+  k_values: [2, 4, 8, 16, 32, 64]
+  
+  # Train/validation/test split configuration
+  split:
+    train_ratio: 0.7
+    val_ratio: 0.15
+    test_ratio: 0.15
+    random_state: 42
+    stratify: true
+
+# Model architecture configuration
+model:
+  # Filter counts for each convolutional block
+  filters: [32, 64, 128, 256]
+  # Kernel size for all conv layers
+  kernel_size: 3
+  # Padding for conv layers
+  padding: "same"
+  # Activation function for conv and dense layers
+  activation: "relu"
+  # Number of units in the dense head
+  dense_units: 64
+  # Dropout rate after dense layer
+  dropout_rate: 0.5
+  # Pool size for MaxPooling layers
+  pool_size: 2
+  # Output activation (classification)
+  output_activation: "softmax"
+  # Output layer dtype (keep float32 for mixed precision stability)
+  output_dtype: "float32"
+
+# Training configuration
+training:
+  # Number of training epochs
+  epochs: 50
+  # Batch size (reduced for memory efficiency)
+  batch_size: 4
+  # Initial learning rate
+  learning_rate: 0.0001
+  # Optimizer settings
+  optimizer:
+    name: "adam"  # Options: "adam", "adamw", "sgd", "rmsprop"
+    # Adam/AdamW parameters
+    beta_1: 0.9
+    beta_2: 0.999
+    epsilon: 0.0000001  # 1e-7
+    # SGD parameters (if using sgd)
+    momentum: 0.9
+    nesterov: true
+  
+  # Learning rate schedule (beyond ReduceLROnPlateau callback)
+  lr_schedule:
+    enabled: false
+    type: "cosine_decay"  # Options: "cosine_decay", "exponential_decay", "polynomial_decay"
+    # Cosine decay settings
+    cosine_decay:
+      decay_steps: null  # Will use total_steps if null
+      alpha: 0.0  # Minimum learning rate as fraction of initial
+    # Exponential decay settings
+    exponential_decay:
+      decay_steps: 1000
+      decay_rate: 0.96
+      staircase: false
+    # Polynomial decay settings
+    polynomial_decay:
+      decay_steps: null  # Will use total_steps if null
+      end_learning_rate: 0.0001
+      power: 1.0
+  
+  # Loss function
+  loss: "sparse_categorical_crossentropy"
+  # Metrics to track
+  metrics:
+    - "sparse_categorical_accuracy"
+  
+  # Data pipeline settings
+  pipeline:
+    # Shuffle buffer size for training
+    shuffle_buffer: 512
+    # Number of parallel map calls
+    num_parallel_calls: 2
+    # Prefetch buffer size (keep small for memory)
+    prefetch: 1
+    # Random seed for shuffling
+    shuffle_seed: 42
+  
+  # Data augmentation (applied only during training)
+  augmentation:
+    horizontal_flip: true
+    vertical_flip: true
+    # Additional augmentation options
+    rotation_range: 0  # Degrees, 0 to disable
+    zoom_range: 0.0  # Float or [lower, upper], 0.0 to disable
+    brightness_range: null  # [lower, upper] or null to disable
+    contrast_range: null  # [lower, upper] or null to disable
+  
+  # Regularization configuration
+  regularization:
+    # L1/L2 regularization for conv layers
+    kernel_regularizer:
+      type: null  # Options: "l1", "l2", "l1_l2", null
+      l1: 0.0
+      l2: 0.0
+    # Dropout in conv blocks (applied before pooling)
+    conv_dropout: 0.0
+    # Weight decay for optimizer (AdamW uses this)
+    weight_decay: 0.0
+    # Gradient clipping (max norm or value)
+    gradient_clip:
+      enabled: false
+      type: "norm"  # Options: "norm", "value"
+      value: 1.0
+  
+  # Batch normalization configuration
+  batch_norm:
+    enabled: false
+    momentum: 0.99
+    epsilon: 0.001
+    # Where to apply: "after_conv" or "after_activation"
+    position: "after_activation"
+  
+  # Callbacks configuration
+  callbacks:
+    # Model checkpoint settings
+    model_checkpoint:
+      enabled: true
+      monitor: "val_sparse_categorical_accuracy"
+      save_best_only: true
+      verbose: 1
+    
+    # Early stopping settings
+    early_stopping:
+      enabled: true
+      monitor: "val_sparse_categorical_accuracy"
+      patience: 10
+      restore_best_weights: true
+      verbose: 1
+    
+    # Learning rate reduction on plateau
+    reduce_lr:
+      enabled: true
+      monitor: "val_sparse_categorical_accuracy"
+      factor: 0.5
+      patience: 5
+      min_lr: 0.0000001  # 1e-7
+      verbose: 1
+    
+    # CSV logger for training history
+    csv_logger:
+      enabled: true
+      append: false
+    
+    # TensorBoard logging
+    tensorboard:
+      enabled: false
+      write_graph: true
+      write_images: false
+      update_freq: "epoch"  # Options: "epoch", "batch", or integer
+      profile_batch: 0  # 0 to disable profiling
+      histogram_freq: 0  # Frequency (in epochs) for histograms (0 to disable)
+    
+    # Kernel export callback (saves conv layer weights during training)
+    kernel_export:
+      enabled: false
+      # Export frequency: "epoch" or specific epoch numbers [1, 5, 10, ...]
+      frequency: "epoch"  # "epoch" means every epoch
+      # Or provide specific epochs
+      export_epochs: null  # [1, 5, 10, 20, 30, 40, 50] or null for all
+      # Save format
+      format: "hdf5"  # Options: "hdf5", "npz", "both"
+
+# GPU and mixed precision configuration
+gpu:
+  # Enable memory growth to avoid TF pre-allocating all GPU memory
+  memory_growth: true
+  # GPU allocator type
+  allocator: "cuda_malloc_async"
+  # Mixed precision training (float16 compute, float32 accumulation)
+  mixed_precision:
+    enabled: true
+    policy: "mixed_float16"
+
+# Evaluation configuration
+evaluation:
+  # Batch size for evaluation (can be larger than training)
+  batch_size: 4
+  # Sample size per class for confusion matrix (null for all)
+  confusion_matrix_samples: 20
+  # Export formats
+  export:
+    # Per-image predictions with centroids
+    per_image_csv: true
+    # Readable format with error metrics
+    readable_csv: true
+    # Grouped summary statistics
+    summary_csv: true
+
+# Visualization configuration
+visualization:
+  # Activation visualization settings
+  activations:
+    enabled: true
+    # Number of sample images to visualize
+    num_samples: 3
+    # DPI for saved images
+    dpi: 150
+  
+  # Kernel visualization settings
+  kernels:
+    enabled: true
+    dpi: 150
+  
+  # Kernel convergence analysis
+  kernel_analysis:
+    enabled: true
+    # Compare kernel evolution across epochs
+    plot_evolution: true
+    # Compute kernel statistics (mean, std, min, max per layer)
+    compute_stats: true
+    # Compute similarity metrics between checkpoints
+    similarity_metrics: ["cosine", "euclidean", "correlation"]
+    # Export final kernel weights
+    export_final_weights: true
+  
+  # Training history plots
+  plots:
+    enabled: true
+    # DPI for raster outputs (PNG)
+    dpi: 300
+    # Export formats
+    formats: ["png", "pdf"]
+    # Smoothing window for metrics (epoch count)
+    smooth_window: 3
+    # Plot style
+    style: "seaborn-v0_8-darkgrid"
+
+# Paths configuration
+paths:
+  # Output directory for all results
+  output_dir: "outputs"
+  # Checkpoint directory
+  checkpoint_dir: "checkpoints"
+  # Best model filename
+  best_model: "best_model.h5"
+  # Training history CSV filename
+  history_csv: "training_history.csv"
+  # Directory for activation visualizations
+  activations_dir: "activations_samples"
+  # Directory for kernel visualizations
+  kernels_dir: "kernels"
+  # Directory for kernel weight exports during training
+  kernel_weights_dir: "kernel_weights"
+  # Directory for kernel convergence analysis
+  kernel_analysis_dir: "kernel_analysis"
+  # Directory for TensorBoard logs
+  tensorboard_log_dir: "logs"
+  # Directory for analysis outputs
+  analysis_dir: "analysis"
+  # Evaluation results CSV filenames
+  eval_per_image_csv: "per_image_centroids.csv"
+  eval_readable_csv: "intermediate_eval_readable.csv"
+  eval_summary_csv: "intermediate_eval_group_summary.csv"
+  eval_predictions_csv: "eval_samples_predictions.csv"
+
+# Logging configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

@@ -67,32 +67,29 @@ unlike the training data, and the predictions should not be trusted.
 
 .. _real-data-normalization:
 
-**Real observations: recenter, don't rescale.** For a real map with
+**Real observations: unit mean, then log.** For a real map with
 positive linear intensities :math:`I`, `turbulens` computes
 
 .. math::
    :label: eq-real-normalization
 
-   x = \log_{10} I, \qquad
-   x' = x + \left(c_\mathrm{train} - c_\mathrm{image}\right),
-   \qquad
-   c = \tfrac{1}{2}\left(q_{0.5} + q_{99.5}\right),
+   x' = \log_{10}\frac{I}{\langle I\rangle},
 
-where :math:`c_\mathrm{image}` is the midpoint of the image's own 0.5th
-and 99.5th percentiles and :math:`c_\mathrm{train}` the midpoint of the
-training values :math:`q_\mathrm{lo}, q_\mathrm{hi}`. Then :math:`x'` goes
-through :eq:`eq-pixel-normalization` with the *training*
+where :math:`\langle I\rangle` is the mean of the map. Then :math:`x'`
+goes through :eq:`eq-pixel-normalization` with the *training*
 :math:`q_\mathrm{lo}, q_\mathrm{hi}`. Non-positive and NaN pixels (noise
-below zero, blanked borders) are first raised to the image's smallest
-positive value.
+below zero, absorption, blanked borders) are first raised to the image's
+smallest positive value.
 
-The shift removes the arbitrary overall level. Under the logarithm this
-includes any calibration factor, distance or channel width, since a
-multiplicative constant in :math:`I` is an additive constant in
-:math:`x`. The width :math:`q_\mathrm{hi} - q_\mathrm{lo}` is *not*
-re-derived from the image. A per-image rescaling would stretch every map
-to the same apparent contrast and erase the amplitude information the
-:math:`\sigma` prediction depends on.
+The training fields all have unit mean density (:ref:`synthetic-data`),
+so dividing by the mean puts a real map on the same footing. Any
+calibration factor, distance or channel width cancels in
+:math:`I/\langle I\rangle`. Both properties of a training image that carry
+:math:`\sigma` are kept: the spread of :math:`x'` (the contrast) and its
+absolute level, since for a log-normal field with unit mean
+:math:`\langle\ln\rho\rangle = -\sigma_s^2/2`
+(:eq:`eq-lognormal-moments`). The width
+:math:`q_\mathrm{hi} - q_\mathrm{lo}` is not re-derived from the image.
 
 .. _denormalization:
 

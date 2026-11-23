@@ -8,7 +8,7 @@ import numpy as np
 from astropy import units as u
 from astropy.wcs.utils import proj_plane_pixel_scales
 
-from turbulens.io.cube import Cube, _FREQUENCY_CTYPE_PREFIXES, _find_spectral_axis
+from turbulens.io.cube import _FREQUENCY_CTYPE_PREFIXES, Cube, _find_spectral_axis
 from turbulens.spectral import estimate_band_edges, fit_inertial_range
 
 
@@ -94,14 +94,15 @@ class CubeBreakdown:
 
 
 def _summarize_wcs(wcs) -> dict:
-    """Return a plain-dict summary of a WCS: CTYPE, CRVAL, and pixel scales per axis."""
+    """Return a plain-dict summary of a WCS: CTYPE, CUNIT, CRVAL, and pixel scales per axis."""
     summary = {
         "ctype": list(wcs.wcs.ctype),
+        "cunit": [str(unit).replace(" ", "") for unit in wcs.wcs.cunit],
         "crval": [float(value) for value in wcs.wcs.crval],
     }
     try:
         summary["pixel_scales"] = [float(scale) for scale in proj_plane_pixel_scales(wcs)]
-    except Exception:
+    except Exception:  # noqa: BLE001 -- any WCS that cannot report pixel scales just omits them
         summary["pixel_scales"] = None
     return summary
 
@@ -178,19 +179,8 @@ def describe_cube(cube: Cube, source_path: str) -> CubeBreakdown:
     if cube.n_channels == 1:
         image = np.nan_to_num(data[0])
 
-        edges = estimate_band_edges(image)
-        spectral_estimate_band_edge = {
-            "k_min": edges["k_min"] if np.isfinite(edges["k_min"]) else None,
-            "k_max": edges["k_max"] if np.isfinite(edges["k_max"]) else None,
-        }
-
-        fit = fit_inertial_range(image)
-        spectral_estimate_power_law = {
-            "alpha": fit["alpha"] if np.isfinite(fit["alpha"]) else None,
-            "r_squared": fit["r_squared"] if np.isfinite(fit["r_squared"]) else None,
-            "k_min": fit["k_min"] if np.isfinite(fit["k_min"]) else None,
-            "k_max": fit["k_max"] if np.isfinite(fit["k_max"]) else None,
-        }
+        spectral_estimate_band_edge = estimate_band_edges(image)
+        spectral_estimate_power_law = fit_inertial_range(image)
 
     return CubeBreakdown(
         shape=tuple(cube.data.shape),

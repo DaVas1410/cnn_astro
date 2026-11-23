@@ -73,7 +73,7 @@ Relation to the published models
 `turbulens` needs only three files per member: ``configuration.json``,
 ``COMPLETED.json`` and ``checkpoints/best_checkpoint.pt``
 (`turbulens.models.checkpoint.load_member`). The Hugging Face model
-repository ``Davas1410/turbulens-ensembles`` contains exactly those files,
+repository ``cPhysPlus/turbulens-ensembles`` contains exactly those files,
 under the same ``<mode>/<version>/ensemble/members/`` layout, for the
 multitask ensemble and the four single-target ensembles. A downloaded
 snapshot is therefore itself a valid output root

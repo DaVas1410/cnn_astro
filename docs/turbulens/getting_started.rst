@@ -16,7 +16,8 @@ From a checkout of the repository:
    pip install -e ".[image]"
 
 The ``image`` extra adds PNG/TIFF support. FITS and ``.npy`` inputs need
-no extras.
+no extras. The ``plot`` extra (matplotlib) adds the ``--plot`` diagnostic
+figure of ``infer`` and ``inspect``.
 
 1. Look at the data
 -------------------
@@ -46,8 +47,8 @@ velocity range is what you need to choose a range in the next step.
   ``--channel N``; :ref:`projection-and-slices` explains why a wide
   velocity range is the physically appropriate choice.
 - ``--real-data`` is required for any real observation. It
-  log-transforms the map and moves it onto the training scale without
-  changing its contrast (:ref:`real-data normalization <real-data-normalization>`).
+  divides the map by its mean and log-transforms it, like the unit-mean
+  training fields, without changing its contrast (:ref:`real-data normalization <real-data-normalization>`).
   Leaving it out on real data gives confident-looking but meaningless
   numbers.
 - ``--model auto`` uses the published multitask ensemble. The first run

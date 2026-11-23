@@ -299,7 +299,7 @@ def test_has_spectral_axis_raises_on_multiple_spectral_axes():
     cube = Cube(data=data, wcs=WCS(header), unit=None, meta=header)
 
     with pytest.raises(ValueError):
-        cube.has_spectral_axis
+        _ = cube.has_spectral_axis
 
 
 def test_has_spectral_axis_raises_when_not_trailing_axis():
@@ -331,7 +331,7 @@ def test_has_spectral_axis_raises_when_not_trailing_axis():
     cube = Cube(data=data, wcs=WCS(header), unit=None, meta=header)
 
     with pytest.raises(ValueError):
-        cube.has_spectral_axis
+        _ = cube.has_spectral_axis
 
 
 def test_velocity_axis_for_velocity_typed_ctype():

@@ -35,12 +35,13 @@ turbulens infer --input observation.fits --integrate 0:100 --real-data \
     --method cnn --model auto --out predictions.ecsv
 ```
 
-- **`--real-data` is required for any real telescope input.** It recenters the image onto the
-  training-set's own normalization scale instead of the image's own pixel range. Omitting it on real
+- **`--real-data` is required for any real telescope input.** It divides the image by its
+  mean and log-transforms it, like the unit-mean training fields, and uses the training set's own
+  normalization scale instead of the image's own pixel range. Omitting it on real
   data silently produces confident-looking but meaningless numbers. Leave it off for synthetic pyFC
   images, which are already on the training log-density scale.
 - **`--model auto`** uses the published pretrained multitask ensemble, downloaded from the
-  [`Davas1410/turbulens-ensembles`](https://huggingface.co/Davas1410/turbulens-ensembles) Hugging Face
+  [`cPhysPlus/turbulens-ensembles`](https://huggingface.co/cPhysPlus/turbulens-ensembles) Hugging Face
   repo on first use (~450 MB) and cached for later runs. Add `--target {k_min,k_max,sigma,beta}` to use
   that target's dedicated single-target ensemble instead, and `--revision <tag-or-commit>` to pin a
   specific release; the exact commit used is recorded in the output table's metadata.
@@ -76,7 +77,7 @@ See `docs/turbulens/api/index.rst` for the full API reference (`Cube`, `Inferenc
 
 - **`--real-data` on real input, always.** See above.
 - **`fft-band` is for synthetic data, `fft-powerlaw` is for real data** — they measure different
-  spectral features and are not interchangeable; see `docs/turbulens/concepts.rst`.
+  spectral features and are not interchangeable; see `docs/turbulens/method/spectral_estimators.rst`.
 - **A prediction near a target's training range edge may be clamped, not measured** — the model's raw
   output is clipped to `[0, 1]` before conversion to physical units, so a genuinely out-of-range input
   can silently report the boundary value instead of extrapolating.

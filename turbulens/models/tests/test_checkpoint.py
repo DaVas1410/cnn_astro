@@ -108,21 +108,32 @@ def test_preprocess_image_imagenet_standardization_single_channel():
     assert clipped_fraction == 0.0
 
 
-def test_real_observation_normalization_log10_transforms_and_recenters():
-    # log10 -> [0, 1, 2, 3], own [0, 100]-percentile center = (0+3)/2 = 1.5; member's center = (10+20)/2 = 15;
-    # every pixel shifts by +13.5.
-    image = np.array([[1.0, 10.0], [100.0, 1000.0]], dtype=np.float32)
+def test_real_observation_normalization_divides_by_mean_and_log10_transforms():
+    # mean = 4 -> image / mean = [0.25, 0.5, 1, 2.25] -> log10 of that.
+    image = np.array([[1.0, 2.0], [4.0, 9.0]], dtype=np.float32)
     member_normalization = NormalizationStats(0.0, 100.0, 10.0, 20.0, 10.0, 1000, 10, 1, "test_fixture")
 
-    recentered, stats = real_observation_normalization(image, member_normalization)
+    normalized, stats = real_observation_normalization(image, member_normalization)
 
-    np.testing.assert_allclose(recentered, np.array([[13.5, 14.5], [15.5, 16.5]], dtype=np.float32))
+    np.testing.assert_allclose(normalized, np.log10(np.array([[0.25, 0.5], [1.0, 2.25]])), rtol=1e-6)
     # The reused scale is the member's own, unchanged -- not re-derived from this image.
     assert stats.lower_value == pytest.approx(10.0)
     assert stats.upper_value == pytest.approx(20.0)
     assert stats.value_range == pytest.approx(10.0)
     assert stats.images_examined == 1
-    assert stats.source == "real_observation_recentered_fixed_training_scale"
+    assert stats.source == "real_observation_unit_mean_fixed_training_scale"
+
+
+def test_real_observation_normalization_is_unit_invariant():
+    member_normalization = NormalizationStats(0.5, 99.5, -1.0, 3.0, 4.0, 1000, 10, 1, "test_fixture")
+    image = np.array([[1.0, 5.0], [50.0, 300.0]], dtype=np.float32)
+
+    normalized, _ = real_observation_normalization(image, member_normalization)
+    rescaled, _ = real_observation_normalization(image * 1.8e18, member_normalization)
+
+    np.testing.assert_allclose(rescaled, normalized, rtol=1e-5, atol=1e-6)
+    # Unit mean in linear space.
+    assert float(np.mean(10.0 ** normalized.astype(np.float64))) == pytest.approx(1.0)
 
 
 def test_real_observation_normalization_floors_nonpositive_pixels():
@@ -132,15 +143,14 @@ def test_real_observation_normalization_floors_nonpositive_pixels():
     recentered, _ = real_observation_normalization(image, member_normalization)
 
     # Non-positive pixels are floored to the image's own smallest positive value (1.0), not to
-    # an arbitrary constant, so they map to the same log10 value as that smallest positive pixel,
-    # before the shared per-image shift is applied.
+    # an arbitrary constant, so they map to the same log10 value as that smallest positive pixel.
     assert np.all(np.isfinite(recentered))
     assert recentered[0, 0] == pytest.approx(recentered[0, 1])
 
 
 def test_real_observation_normalization_preserves_relative_spread_across_images():
     # Two images with genuinely different log-density spread (one wide, one narrow) must stay
-    # relatively different after recentering -- a naive per-image rescale-to-fill-[0,1] would
+    # relatively different after normalization -- a naive per-image rescale-to-fill-[0,1] would
     # instead erase this difference, which is exactly the signal the model's `sigma` head reads.
     member_normalization = NormalizationStats(0.0, 100.0, -1.0, 1.0, 2.0, 1000, 10, 1, "test_fixture")
     narrow_image = np.array([[10.0, 10.0], [100.0, 100.0]], dtype=np.float32)  # log10 spread: 0 to 1
@@ -155,7 +165,7 @@ def test_real_observation_normalization_preserves_relative_spread_across_images(
 def test_real_observation_normalization_fed_through_preprocess_image_does_not_saturate():
     # A real image whose linear scale is wildly outside a member's training-time range would clip
     # 100% of pixels if fed to preprocess_image directly with the member's own NormalizationStats;
-    # log10 + per-image recentering should avoid that.
+    # log10 of the unit-mean image should avoid that.
     image = np.array([[1.0, 500.0], [50.0, 300.0]], dtype=np.float32)
     member_normalization = NormalizationStats(0.5, 99.5, -1.0, 3.0, 4.0, 1000, 10, 1, "test_fixture")
 

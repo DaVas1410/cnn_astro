@@ -29,7 +29,7 @@ pip install -e ".[image]"
 The repo ships a real HI radio observation (Parkes GASS survey) you can try right away:
 
 ```bash
-turbulens inspect --input huggingface/space/examples/gass_0_0_1774393774.fits.gz
+turbulens inspect --input examples/gass_0_0_1774393774.fits.gz
 ```
 
 ```
@@ -45,7 +45,7 @@ next steps integrate (sum) the channels into one.
 ## Classical estimate, no model needed
 
 ```bash
-turbulens infer --input huggingface/space/examples/gass_0_0_1774393774.fits.gz \
+turbulens infer --input examples/gass_0_0_1774393774.fits.gz \
     --integrate 0:1201 --method fft-powerlaw
 ```
 
@@ -67,7 +67,7 @@ observation.
 Unzip `turbulens-tutor-ensemble.zip` somewhere and point `--output-root` at it:
 
 ```bash
-turbulens infer --input huggingface/space/examples/gass_0_0_1774393774.fits.gz \
+turbulens infer --input examples/gass_0_0_1774393774.fits.gz \
     --integrate 0:1201 --real-data --method cnn --model auto \
     --output-root /path/to/unzipped/turbulens-tutor-ensemble
 ```
@@ -75,14 +75,15 @@ turbulens infer --input huggingface/space/examples/gass_0_0_1774393774.fits.gz \
 ```
 image_index target        value           epistemic_std
 ----------- ------ ------------------- -------------------
-          0  k_min  1.3792097568511963  0.5257347226142883
-          0  k_max   63.90980911254883 0.15796305239200592
-          0  sigma    4.14192008972168  0.1170581504702568
-          0   beta -2.5287206172943115 0.12315365672111511
+          0  k_min  1.0480403900146484 0.06671072542667389
+          0  k_max  63.915672302246094 0.18856246769428253
+          0  sigma  0.7347601056098938 0.053723521530628204
+          0   beta -2.4883201122283936 0.053744297474622726
 ```
 
 `--real-data` matters here: it tells `turbulens` this is a real telescope image, not a synthetic
-training-style image, and recenters it onto the scale the model expects. `epistemic_std` is the
+training-style image, and divides it by its mean and log-transforms it, like the unit-mean
+training fields the model expects. `epistemic_std` is the
 ensemble's spread across its 5 independently trained members, not a calibrated confidence interval
 (see the model card's limitations section).
 

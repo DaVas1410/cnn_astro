@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 import torch
 
-from turbulens.inference import Inferencer
+from turbulens.inference import ClippedPixelsWarning, Inferencer
 from turbulens.models.architecture import build_model_from_config
 
 
@@ -83,8 +83,25 @@ def test_predict_warns_when_input_is_far_out_of_training_distribution(tmp_path):
     _write_member(root, "member_0")
     _write_member(root, "member_1")
 
-    with pytest.warns(UserWarning):
+    with pytest.warns(ClippedPixelsWarning):
         Inferencer(root).predict(np.full((64, 64), 1000.0, dtype=np.float32))
+
+
+def test_clipped_pixels_marks_at_least_the_reported_clipped_fraction(tmp_path):
+    root = tmp_path / "ensemble_root"
+    _write_member(root, "member_0")
+    _write_member(root, "member_1")
+    image = np.zeros((64, 64), dtype=np.float32)
+    image[:16] = 1000.0  # a quarter of the image far above the training range
+    inferencer = Inferencer(root)
+
+    with pytest.warns(ClippedPixelsWarning):
+        table = inferencer.predict(image)
+    mask = inferencer.clipped_pixels(image)
+
+    assert mask.shape == image.shape and mask.dtype == bool
+    assert mask[:16].all()
+    assert mask.mean() >= table.meta["clipped_pixel_fraction_max"]
 
 
 def test_predict_real_data_avoids_saturation_warning_on_wildly_out_of_scale_input(tmp_path):

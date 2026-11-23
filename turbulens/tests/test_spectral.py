@@ -37,21 +37,21 @@ def test_estimate_band_edges_recovers_kmin_kmax():
     assert abs(edges["k_max"] - 60) <= 3
 
 
-def test_estimate_band_edges_returns_nan_for_constant_image():
+def test_estimate_band_edges_returns_none_for_constant_image():
     edges = estimate_band_edges(np.zeros((32, 32)))
 
-    assert np.isnan(edges["k_min"])
-    assert np.isnan(edges["k_max"])
+    assert edges["k_min"] is None
+    assert edges["k_max"] is None
 
 
-def test_estimate_band_edges_returns_nan_for_white_noise():
+def test_estimate_band_edges_returns_none_for_white_noise():
     # White noise has no real spectral edge; the adaptive noise-floor threshold should
     # recognize this (rather than reporting some arbitrary low/high k as a "band").
     rng = np.random.default_rng(0)
     edges = estimate_band_edges(rng.normal(size=(64, 64)))
 
-    assert np.isnan(edges["k_min"])
-    assert np.isnan(edges["k_max"])
+    assert edges["k_min"] is None
+    assert edges["k_max"] is None
 
 
 def test_estimate_band_edges_warns_when_result_hits_grid_boundary():
@@ -85,7 +85,7 @@ def test_spectral_estimator_predict_returns_kmin_kmax_rows():
     assert list(table["image_index"]) == [0, 0]
     assert abs(float(table[0]["value"]) - 10) <= 3
     assert abs(float(table[1]["value"]) - 60) <= 3
-    assert np.isnan(table[0]["epistemic_std"])
+    assert table["epistemic_std"].mask.all()
 
 
 def test_spectral_estimator_predict_accepts_a_batch_of_images():
@@ -111,13 +111,13 @@ def test_fit_inertial_range_recovers_spectral_index():
     assert fit["k_min"] < fit["k_max"]
 
 
-def test_fit_inertial_range_returns_nan_for_constant_image():
+def test_fit_inertial_range_returns_none_for_constant_image():
     fit = fit_inertial_range(np.zeros((32, 32)))
 
-    assert np.isnan(fit["alpha"])
-    assert np.isnan(fit["r_squared"])
-    assert np.isnan(fit["k_min"])
-    assert np.isnan(fit["k_max"])
+    assert fit["alpha"] is None
+    assert fit["r_squared"] is None
+    assert fit["k_min"] is None
+    assert fit["k_max"] is None
 
 
 def test_fit_inertial_range_r_squared_distinguishes_real_power_law_from_noise():
@@ -155,7 +155,16 @@ def test_spectral_estimator_power_law_predict_returns_four_rows_including_alpha_
 
     assert list(table["target"]) == ["k_min", "k_max", "alpha", "r_squared"]
     assert float(table[0]["value"]) < float(table[1]["value"])
-    assert np.isnan(table[0]["epistemic_std"])
-    values = dict(zip(table["target"], table["value"]))
+    assert table["epistemic_std"].mask.all()
+    values = dict(zip(table["target"], table["value"], strict=True))
     assert values["alpha"] == pytest.approx(-3.67, abs=0.3)
     assert values["r_squared"] > 0.8
+
+
+def test_spectral_estimator_masks_estimates_it_could_not_compute():
+    with pytest.warns(UserWarning):
+        table = SpectralEstimator().predict(np.zeros((32, 32)))
+
+    assert table["value"].mask.all()
+    assert table["epistemic_std"].mask.all()
+    assert not np.isnan(np.ma.getdata(table["value"])).any()

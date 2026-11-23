@@ -8,7 +8,7 @@ from turbulens.io.image_loaders import load_input, load_numpy, load_png_or_tiff
 def test_load_png_single_band_preserves_values(tmp_path):
     path = tmp_path / "image.png"
     data = np.arange(16, dtype=np.uint8).reshape(4, 4)
-    Image.fromarray(data, mode="L").save(path)
+    Image.fromarray(data).save(path)
 
     cube = load_png_or_tiff(path)
 
@@ -21,7 +21,7 @@ def test_load_png_single_band_preserves_values(tmp_path):
 def test_load_tiff_32bit_float_preserves_dynamic_range(tmp_path):
     path = tmp_path / "image.tiff"
     data = np.linspace(0, 70000, 16, dtype=np.float32).reshape(4, 4)
-    Image.fromarray(data, mode="F").save(path)
+    Image.fromarray(data).save(path)
 
     cube = load_png_or_tiff(path)
 
@@ -32,7 +32,7 @@ def test_load_rgb_png_converts_without_8bit_l_mode(tmp_path):
     path = tmp_path / "rgb.png"
     data = np.zeros((4, 4, 3), dtype=np.uint8)
     data[..., 0] = 100
-    Image.fromarray(data, mode="RGB").save(path)
+    Image.fromarray(data).save(path)
 
     cube = load_png_or_tiff(path)
 
@@ -75,7 +75,7 @@ def test_load_input_rejects_unrecognized_extension(tmp_path):
 
 def test_load_input_rejects_hdu_for_non_fits(tmp_path):
     path = tmp_path / "image.png"
-    Image.fromarray(np.zeros((4, 4), dtype=np.uint8), mode="L").save(path)
+    Image.fromarray(np.zeros((4, 4), dtype=np.uint8)).save(path)
 
     with pytest.raises(ValueError):
         load_input(path, hdu=1)
